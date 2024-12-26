@@ -132,20 +132,15 @@ class ActivityLog(db.Model):
     company_id = db.Column(db.Integer, db.ForeignKey('company.id'), nullable=False)
 
 
-# Auto-migrate database on app start (for Render or production environments)
-@app.before_first_request
-def setup_database():
-    """
-    Runs once before the first request to ensure the database is initialized.
-    If tables do not exist, they will be created automatically.
-    """
+@app.route('/run-migrations', methods=['GET'])
+def run_migrations():
+    from flask_migrate import upgrade
     try:
-        with app.app_context():
-            # Check if tables exist; if not, create them
-            db.create_all()
-            print("Database tables created successfully.")
+        upgrade()  # Runs the migration script to initialize or update the database
+        return "Database migrations applied successfully!", 200
     except Exception as e:
-        print(f"Error during database setup: {e}")
+        return f"An error occurred: {e}", 500
+
 
         
         

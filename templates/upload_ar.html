@@ -1,0 +1,158 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h2>Upload A/R Report</h2>
+
+<!-- Flash Messages -->
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+    <div class="flash-messages">
+      {% for category, message in messages %}
+        {% if category == "upload" %}
+        <div class="alert {{ category }}">{{ message }}</div>
+        {% endif %}
+      {% endfor %}
+    </div>
+  {% endif %}
+{% endwith %}
+
+<!-- File Upload Form -->
+<form action="/upload_ar" method="POST" enctype="multipart/form-data" class="upload-form">
+    <label for="file" class="file-label">Choose an Excel file:</label>
+    <input type="file" name="file" id="file" required>
+    <button type="submit" class="dashboard-btn">Upload</button>
+</form>
+
+<!-- Current A/R Data -->
+<div class="ar-status">
+    <h3>Current A/R Data:</h3>
+    {% if profiles %}
+    <div class="ar-table">
+        <table>
+            <thead>
+                <tr>
+                    <th>Company Name</th>
+                    <th># of Contracts</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for company in profiles %}
+                <tr>
+                    <td>
+                        <a href="{{ url_for('company_profile', company_id=company.id) }}" class="view-profile-link">
+                            {{ company.name }}
+                        </a>
+                    </td>
+                    <td>{{ company.contracts | length }}</td>
+                    <td>
+                        <a href="{{ url_for('company_profile', company_id=company.id) }}" class="dashboard-btn">
+                            View Details
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p>No data available. Please upload a report.</p>
+    {% endif %}
+</div>
+{% endblock %}
+
+<style>
+/* Upload Page Styles */
+.ar-status {
+    margin-top: 20px;
+}
+
+.ar-table table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+    background-color: #fff;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
+}
+
+.ar-table th, .ar-table td {
+    padding: 12px 15px;
+    text-align: left;
+    border-bottom: 1px solid #ddd;
+}
+
+.ar-table th {
+    background-color: #007BFF;
+    color: white;
+    font-weight: bold;
+    text-transform: uppercase;
+    font-size: 14px;
+}
+
+.ar-table td {
+    font-size: 14px;
+    color: #333;
+}
+
+.ar-table tr:hover {
+    background-color: #f1f1f1;
+}
+
+.view-profile-link {
+    color: #007BFF;
+    text-decoration: none;
+    font-weight: bold;
+}
+
+.view-profile-link:hover {
+    color: #0056b3;
+    text-decoration: underline;
+}
+
+.file-label {
+    font-size: 16px;
+    font-weight: bold;
+    margin-right: 10px;
+}
+
+.upload-form {
+    margin-bottom: 20px;
+}
+
+.upload-form input[type="file"] {
+    margin-right: 10px;
+}
+
+.upload-form .dashboard-btn {
+    margin-top: 10px;
+}
+
+/* Flash Messages */
+.flash-messages {
+    margin-top: 10px;
+    margin-bottom: 20px;
+}
+
+.alert.upload {
+    background-color: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+    padding: 10px;
+    border-radius: 4px;
+    font-size: 14px;
+    margin-bottom: 10px;
+}
+</style>
+
+<script>
+    setTimeout(() => {
+        const alertBox = document.querySelector('.alert');
+        if (alertBox) {
+            alertBox.style.transition = "opacity 0.5s";
+            alertBox.style.opacity = 0;
+            setTimeout(() => alertBox.remove(), 500);
+        }
+    }, 3000);
+</script>

@@ -1,0 +1,163 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h2>Statistics</h2>
+
+<!-- Stats Table -->
+<div class="stats-table">
+    <h3>Key Statistics</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>Statistic</th>
+                <th>Value</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>Total Outstanding Balance</td>
+                <td>${{ total_balance }}</td>
+            </tr>
+            <tr>
+                <td>Total Contracts</td>
+                <td>{{ total_contracts }}</td>
+            </tr>
+            <tr>
+                <td>Total Paid Contracts</td>
+                <td>{{ total_paid_contracts }}</td>
+            </tr>
+            <tr>
+                <td>Calls Made</td>
+                <td>{{ calls_made }}</td>
+            </tr>
+            <tr>
+                <td>Emails Sent</td>
+                <td>{{ emails_sent }}</td>
+            </tr>
+            <tr>
+                <td>Attempts Made</td>
+                <td>{{ attempts_made }}</td>
+            </tr>
+            <tr>
+                <td>Payments Logged</td>
+                <td>{{ payments_made }}</td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+
+<!-- Charts Section -->
+<div class="charts-container">
+    <div class="chart-wrapper">
+        <canvas id="contractDistributionChart"></canvas>
+    </div>
+    <div class="chart-wrapper">
+        <canvas id="actionsChart"></canvas>
+    </div>
+    <div class="chart-wrapper">
+        <canvas id="attemptsChart"></canvas>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    // Contract Distribution Chart
+    const contractCtx = document.getElementById('contractDistributionChart').getContext('2d');
+    new Chart(contractCtx, {
+        type: 'pie',
+        data: {
+            labels: ['Paid Contracts', 'Unpaid Contracts'],
+            datasets: [{
+                label: 'Contracts',
+                data: [{{ total_paid_contracts }}, {{ total_contracts - total_paid_contracts }}],
+                backgroundColor: ['#4CAF50', '#FF5733'],
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: { position: 'top', labels: { boxWidth: 10 } },
+                title: { display: true, text: 'Contract Distribution' }
+            }
+        }
+    });
+
+    // Calls vs Emails Chart
+    const actionsCtx = document.getElementById('actionsChart').getContext('2d');
+    new Chart(actionsCtx, {
+        type: 'bar',
+        data: {
+            labels: ['Calls Made', 'Emails Sent'],
+            datasets: [{
+                label: 'Actions',
+                data: [{{ calls_made }}, {{ emails_sent }}],
+                backgroundColor: ['#3498DB', '#F1C40F'],
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: { position: 'top', labels: { boxWidth: 10 } },
+                title: { display: true, text: 'Actions (Calls vs Emails)' }
+            },
+            scales: {
+                y: { beginAtZero: true }
+            }
+        }
+    });
+
+    // Attempts vs Payments Chart
+    const attemptsCtx = document.getElementById('attemptsChart').getContext('2d');
+    new Chart(attemptsCtx, {
+        type: 'line',
+        data: {
+            labels: ['Attempts', 'Payments'],
+            datasets: [{
+                label: 'Attempts vs Payments',
+                data: [{{ attempts_made }}, {{ payments_made }}],
+                backgroundColor: ['rgba(75, 192, 192, 0.2)'],
+                borderColor: ['rgba(75, 192, 192, 1)'],
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: { position: 'top', labels: { boxWidth: 10 } },
+                title: { display: true, text: 'Attempts vs Payments' }
+            },
+            scales: {
+                y: { beginAtZero: true }
+            }
+        }
+    });
+</script>
+
+<style>
+    .stats-table {
+        margin-bottom: 20px;
+    }
+    .stats-table table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 20px;
+    }
+    .stats-table th, .stats-table td {
+        border: 1px solid #ddd;
+        padding: 8px;
+        text-align: left;
+    }
+    .charts-container {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 20px;
+        justify-content: space-around;
+    }
+    .chart-wrapper {
+        flex: 1 1 300px;
+        max-width: 400px;
+    }
+</style>
+{% endblock %}

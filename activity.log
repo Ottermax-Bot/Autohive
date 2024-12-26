@@ -1,0 +1,67 @@
+[2024-12-23 14:35:55,755] ERROR in app: Exception on /dashboard [GET]
+Traceback (most recent call last):
+  File "C:\Users\ray\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\app.py", line 1511, in wsgi_app
+    response = self.full_dispatch_request()
+  File "C:\Users\ray\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\app.py", line 919, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+  File "C:\Users\ray\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\app.py", line 917, in full_dispatch_request
+    rv = self.dispatch_request()
+  File "C:\Users\ray\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\app.py", line 902, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "C:\Users\ray\Desktop\AutoHiveCRM\app.py", line 159, in dashboard
+    return render_template(
+        "dashboard.html",
+    ...<3 lines>...
+        inactive_customers=inactive_customers,
+    )
+  File "C:\Users\ray\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\templating.py", line 150, in render_template
+    return _render(app, template, context)
+  File "C:\Users\ray\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\templating.py", line 131, in _render
+    rv = template.render(context)
+  File "C:\Users\ray\AppData\Local\Programs\Python\Python313\Lib\site-packages\jinja2\environment.py", line 1304, in render
+    self.environment.handle_exception()
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\ray\AppData\Local\Programs\Python\Python313\Lib\site-packages\jinja2\environment.py", line 939, in handle_exception
+    raise rewrite_traceback_stack(source=source)
+  File "C:\Users\ray\Desktop\AutoHiveCRM\templates\dashboard.html", line 1, in top-level template code
+    {% extends "base.html" %}
+  File "C:\Users\ray\Desktop\AutoHiveCRM\templates\base.html", line 37, in top-level template code
+    {% block content %}{% endblock %}
+    ^^^^^^^^^
+  File "C:\Users\ray\Desktop\AutoHiveCRM\templates\dashboard.html", line 31, in block 'content'
+    <td>{{ (now - contract.date_in).days }} days</td>
+    ^^^^^
+TypeError: unsupported operand type(s) for -: 'datetime.datetime' and 'datetime.date'
+[2024-12-23 15:08:25,943] INFO in app: Employee updated contact person, email for BOYS & GIRLS CLUB OF CENTRAL GEORGIA
+[2024-12-23 15:40:23,157] INFO in app: Received company_id: 11, contract_number: ROME-117855
+[2024-12-23 15:41:28,727] INFO in app: Received company_id: None, contract_number: ROME-117855
+[2024-12-23 15:41:33,579] INFO in app: Received company_id: 4, contract_number: ROME-118045
+[2024-12-23 15:41:37,219] INFO in app: Received company_id: None, contract_number: ROME-118045
+[2024-12-23 15:42:12,145] INFO in app: Received company_id: None, contract_number: ROME-118045
+[2024-12-23 15:47:14,779] INFO in app: Received company_id: 4, contract_number: ROME-118131
+[2024-12-23 15:47:18,285] INFO in app: Received company_id: None, contract_number: ROME-118045
+[2024-12-23 15:47:28,442] INFO in app: Received company_id: None, contract_number: ROME-117892
+[2024-12-23 15:47:35,082] INFO in app: Received company_id: None, contract_number: ROME-117892
+[2024-12-23 15:47:40,934] INFO in app: Received company_id: None, contract_number: ROME-117892
+[2024-12-23 15:47:46,001] INFO in app: Received company_id: None, contract_number: ROME-117892
+[2024-12-23 15:47:50,891] INFO in app: Received company_id: None, contract_number: ROME-117892
+[2024-12-23 15:48:14,232] INFO in app: Received company_id: None, contract_number: ROME-117892
+[2024-12-23 15:48:22,061] INFO in app: Received company_id: None, contract_number: ROME-117892
+[2024-12-23 15:48:28,362] INFO in app: Received company_id: None, contract_number: ROME-117892
+[2024-12-23 15:48:33,978] INFO in app: Received company_id: 6, contract_number: ROME-118129
+[2024-12-23 15:57:39,861] INFO in app: Received company_id: None, contract_number: ROME-117872
+[2024-12-23 15:57:42,594] INFO in app: Received company_id: None, contract_number: ROME-117872
+[2024-12-23 15:57:45,665] INFO in app: Received company_id: 5, contract_number: ROME-118047
+[2024-12-23 15:57:45,670] INFO in app: Marked contract ROME-118047 as paid for company ID 5
+[2024-12-23 15:57:52,452] INFO in app: Received company_id: None, contract_number: ROME-118047
+[2024-12-23 15:59:30,207] INFO in app: Received company_id: None, contract_number: ROME-118129
+[2024-12-23 16:13:01,911] INFO in app: Received company_id: None, contract_number: ROME-117780
+[2024-12-23 16:13:30,187] INFO in app: Form data received: ImmutableMultiDict([('company', 'ATLANTIC SHORES CHRISTIAN SCHOOL'), ('contract_number', 'ROME-117780')])
+[2024-12-23 16:13:43,184] INFO in app: Form data received: ImmutableMultiDict([('company_id', '11'), ('contract_number', 'ROME-117856')])
+[2024-12-23 16:13:44,694] INFO in app: Form data received: ImmutableMultiDict([('company', 'BERRY COLLEGE-WOMEN`S SOFTBALL'), ('contract_number', 'ROME-117856')])
+[2024-12-23 16:43:07,747] INFO in app: Received company_id: None, contract_number: ROME-117872
+[2024-12-23 16:49:19,531] INFO in app: Received company_id: None, contract_number: ROME-117872
+[2024-12-23 16:49:27,402] INFO in app: Received company_id: None, contract_number: ROME-117892
+[2024-12-23 16:51:12,510] INFO in app: Received company_id: 24, contract_number: ROME-117589
+[2024-12-23 16:51:12,515] INFO in app: Marked contract ROME-117589 as paid for company ID 24

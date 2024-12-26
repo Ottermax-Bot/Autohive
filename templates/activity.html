@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h2>Activity Log</h2>
+
+<!-- Filters Section -->
+<div class="filter-container">
+    <label for="employee-filter"><strong>Filter by Employee:</strong></label>
+    <select id="employee-filter">
+        <option value="">All</option>
+        {% for employee in employees %}
+        <option value="{{ employee }}">{{ employee }}</option>
+        {% endfor %}
+    </select>
+
+    <label for="action-filter"><strong>Filter by Action:</strong></label>
+    <select id="action-filter">
+        <option value="">All</option>
+        <option value="Email Sent">Email Sent</option>
+        <option value="Call Made">Call Made</option>
+        <option value="Call Received">Call Received</option>
+        <option value="Marked as Paid">Marked as Paid</option>
+        <option value="Added Note">Added Note</option>
+    </select>
+
+    <label for="search-input"><strong>Search Details:</strong></label>
+    <input type="text" id="search-input" placeholder="Search details...">
+</div>
+
+<!-- Activity Log Table -->
+<div class="table-container">
+    <table>
+        <thead>
+            <tr>
+                <th>Date/Time</th>
+                <th>Employee</th>
+                <th>Action</th>
+                <th>Details</th>
+            </tr>
+        </thead>
+        <tbody id="activity-log-table">
+            {% for log in activity_log %}
+            <tr data-employee="{{ log.employee }}" data-action="{{ log.action }}">
+                <td>{{ log.timestamp }}</td>
+                <td>{{ log.employee }}</td>
+                <td>{{ log.action }}</td>
+                <td>{{ log.details }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<script>
+    document.getElementById('employee-filter').addEventListener('change', filterLogs);
+    document.getElementById('action-filter').addEventListener('change', filterLogs);
+    document.getElementById('search-input').addEventListener('input', filterLogs);
+
+    function filterLogs() {
+        const employeeFilter = document.getElementById('employee-filter').value.toLowerCase();
+        const actionFilter = document.getElementById('action-filter').value.toLowerCase();
+        const searchInput = document.getElementById('search-input').value.toLowerCase();
+
+        const rows = document.querySelectorAll('#activity-log-table tr');
+        rows.forEach(row => {
+            const employee = row.dataset.employee.toLowerCase();
+            const action = row.dataset.action.toLowerCase();
+            const details = row.querySelector('td:last-child').textContent.toLowerCase();
+
+            const matchesEmployee = !employeeFilter || employee.includes(employeeFilter);
+            const matchesAction = !actionFilter || action.includes(actionFilter);
+            const matchesSearch = !searchInput || details.includes(searchInput);
+
+            row.style.display = matchesEmployee && matchesAction && matchesSearch ? '' : 'none';
+        });
+    }
+</script>
+{% endblock %}

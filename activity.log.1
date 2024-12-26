@@ -1,0 +1,124 @@
+[2024-12-23 14:14:25,717] ERROR in app: Exception on /company_profile/1 [GET]
+Traceback (most recent call last):
+  File "C:\Users\ray\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\app.py", line 1511, in wsgi_app
+    response = self.full_dispatch_request()
+  File "C:\Users\ray\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\app.py", line 919, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+  File "C:\Users\ray\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\app.py", line 917, in full_dispatch_request
+    rv = self.dispatch_request()
+  File "C:\Users\ray\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\app.py", line 902, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "C:\Users\ray\Desktop\AutoHiveCRM\app.py", line 337, in company_profile
+    return render_template(
+        "company_profile.html",
+    ...<7 lines>...
+        total_paid=total_paid,
+    )
+  File "C:\Users\ray\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\templating.py", line 150, in render_template
+    return _render(app, template, context)
+  File "C:\Users\ray\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\templating.py", line 131, in _render
+    rv = template.render(context)
+  File "C:\Users\ray\AppData\Local\Programs\Python\Python313\Lib\site-packages\jinja2\environment.py", line 1304, in render
+    self.environment.handle_exception()
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\ray\AppData\Local\Programs\Python\Python313\Lib\site-packages\jinja2\environment.py", line 939, in handle_exception
+    raise rewrite_traceback_stack(source=source)
+  File "C:\Users\ray\Desktop\AutoHiveCRM\templates\company_profile.html", line 1, in top-level template code
+    {% extends "base.html" %}
+  File "C:\Users\ray\Desktop\AutoHiveCRM\templates\base.html", line 37, in top-level template code
+    {% block content %}{% endblock %}
+    ^^^^^^^^^
+  File "C:\Users\ray\Desktop\AutoHiveCRM\templates\company_profile.html", line 61, in block 'content'
+    <textarea name="notes" placeholder="Add notes about this profile">{{ company_details.notes }}</textarea>
+    ^^^^^^^^^^^^^
+  File "C:\Users\ray\AppData\Local\Programs\Python\Python313\Lib\site-packages\jinja2\environment.py", line 487, in getattr
+    return getattr(obj, attribute)
+jinja2.exceptions.UndefinedError: 'company_details' is undefined
+[2024-12-23 14:14:39,479] ERROR in app: Exception on /company_profile/1 [GET]
+Traceback (most recent call last):
+  File "C:\Users\ray\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\app.py", line 1511, in wsgi_app
+    response = self.full_dispatch_request()
+  File "C:\Users\ray\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\app.py", line 919, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+  File "C:\Users\ray\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\app.py", line 917, in full_dispatch_request
+    rv = self.dispatch_request()
+  File "C:\Users\ray\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\app.py", line 902, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "C:\Users\ray\Desktop\AutoHiveCRM\app.py", line 337, in company_profile
+    return render_template(
+        "company_profile.html",
+    ...<7 lines>...
+        total_paid=total_paid,
+    )
+  File "C:\Users\ray\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\templating.py", line 150, in render_template
+    return _render(app, template, context)
+  File "C:\Users\ray\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\templating.py", line 131, in _render
+    rv = template.render(context)
+  File "C:\Users\ray\AppData\Local\Programs\Python\Python313\Lib\site-packages\jinja2\environment.py", line 1304, in render
+    self.environment.handle_exception()
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\ray\AppData\Local\Programs\Python\Python313\Lib\site-packages\jinja2\environment.py", line 939, in handle_exception
+    raise rewrite_traceback_stack(source=source)
+  File "C:\Users\ray\Desktop\AutoHiveCRM\templates\company_profile.html", line 1, in top-level template code
+    {% extends "base.html" %}
+  File "C:\Users\ray\Desktop\AutoHiveCRM\templates\base.html", line 37, in top-level template code
+    {% block content %}{% endblock %}
+    ^^^^^^^^^
+  File "C:\Users\ray\Desktop\AutoHiveCRM\templates\company_profile.html", line 61, in block 'content'
+    <textarea name="notes" placeholder="Add notes about this profile">{{ company_details.notes }}</textarea>
+    ^^^^^^^^^^^^^
+  File "C:\Users\ray\AppData\Local\Programs\Python\Python313\Lib\site-packages\jinja2\environment.py", line 487, in getattr
+    return getattr(obj, attribute)
+jinja2.exceptions.UndefinedError: 'company_details' is undefined
+[2024-12-23 14:14:42,971] ERROR in app: Exception on /activity [GET]
+Traceback (most recent call last):
+  File "C:\Users\ray\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\app.py", line 1511, in wsgi_app
+    response = self.full_dispatch_request()
+  File "C:\Users\ray\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\app.py", line 919, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+  File "C:\Users\ray\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\app.py", line 917, in full_dispatch_request
+    rv = self.dispatch_request()
+  File "C:\Users\ray\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\app.py", line 902, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "C:\Users\ray\Desktop\AutoHiveCRM\app.py", line 456, in activity
+    activity_log=activity_log,
+                 ^^^^^^^^^^^^
+NameError: name 'activity_log' is not defined. Did you mean: 'ActivityLog'?
+[2024-12-23 14:14:45,288] ERROR in app: Exception on /dashboard [GET]
+Traceback (most recent call last):
+  File "C:\Users\ray\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\app.py", line 1511, in wsgi_app
+    response = self.full_dispatch_request()
+  File "C:\Users\ray\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\app.py", line 919, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+  File "C:\Users\ray\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\app.py", line 917, in full_dispatch_request
+    rv = self.dispatch_request()
+  File "C:\Users\ray\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\app.py", line 902, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "C:\Users\ray\Desktop\AutoHiveCRM\app.py", line 159, in dashboard
+    return render_template(
+        "dashboard.html",
+    ...<3 lines>...
+        inactive_customers=inactive_customers,
+    )
+  File "C:\Users\ray\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\templating.py", line 150, in render_template
+    return _render(app, template, context)
+  File "C:\Users\ray\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\templating.py", line 131, in _render
+    rv = template.render(context)
+  File "C:\Users\ray\AppData\Local\Programs\Python\Python313\Lib\site-packages\jinja2\environment.py", line 1304, in render
+    self.environment.handle_exception()
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\ray\AppData\Local\Programs\Python\Python313\Lib\site-packages\jinja2\environment.py", line 939, in handle_exception
+    raise rewrite_traceback_stack(source=source)
+  File "C:\Users\ray\Desktop\AutoHiveCRM\templates\dashboard.html", line 1, in top-level template code
+    {% extends "base.html" %}
+  File "C:\Users\ray\Desktop\AutoHiveCRM\templates\base.html", line 37, in top-level template code
+    {% block content %}{% endblock %}
+    ^^^^^^^^^
+  File "C:\Users\ray\Desktop\AutoHiveCRM\templates\dashboard.html", line 31, in block 'content'
+    <td>{{ (now - contract.date_in).days }} days</td>
+    ^^^^^
+TypeError: unsupported operand type(s) for -: 'datetime.datetime' and 'datetime.date'

@@ -1,0 +1,214 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h2>{{ company.name }} Profile</h2>
+
+<div class="main-container">
+
+   <!-- Company Information and Statistics -->
+   <div class="row">
+       <!-- Company Information Block -->
+       <div class="block company-info">
+           <h3>Company Information</h3>
+           
+           <!-- Contact Person -->
+           <p>
+               <strong>Contact Person:</strong> 
+               {{ company.contact_person or "N/A" }}
+           </p>
+           
+           <!-- Phone Number -->
+           <p>
+               <strong>Phone Number:</strong> 
+               {{ company.phone_number or "N/A" }}
+           </p>
+           
+           <!-- Email -->
+           <p>
+               <strong>Email:</strong> 
+               {% if company.email %}
+                   <a href="mailto:{{ company.email }}">{{ company.email }}</a>
+               {% else %}
+                   N/A
+               {% endif %}
+           </p>
+           
+           <!-- Address -->
+           <p>
+               <strong>Address:</strong> 
+               {{ company.address or "N/A" }}
+           </p>
+
+           <!-- Alternative Contacts -->
+           {% if company.alternative_contacts %}
+           <h4>Alternative Contacts:</h4>
+           <ul>
+               {% for contact in company.alternative_contacts %}
+               <li>
+                   <strong>{{ contact.name or "N/A" }}</strong> - 
+                   {{ contact.phone or "N/A" }} - 
+                   {% if contact.email %}
+                       <a href="mailto:{{ contact.email }}">{{ contact.email }}</a>
+                   {% else %}
+                       N/A
+                   {% endif %}
+               </li>
+               {% endfor %}
+           </ul>
+           {% else %}
+           <p><em>No alternative contacts listed.</em></p>
+           {% endif %}
+       </div>
+   </div>
+
+   <!-- Statistics Block -->
+   <div class="block statistics">
+       <h3>Statistics</h3>
+       <p><strong>Total Contracts:</strong> {{ contracts | length }}</p>
+       <p><strong>Total Money Spent:</strong> ${{ total_paid + total_unpaid }}</p>
+       <p><strong>Total Unpaid:</strong> ${{ total_unpaid }}</p>
+       <p><strong>Total Paid:</strong> ${{ total_paid }}</p>
+   </div>
+
+   <!-- Quick Actions -->
+   <div class="block quick-actions">
+       <h3>Quick Actions</h3>
+       <form action="/log_activity" method="POST">
+           <input type="hidden" name="company_id" value="{{ company.id }}">
+           <button type="submit" name="action" value="Email Sent" class="quick-btn">Email Sent</button>
+           <button type="submit" name="action" value="Call Made" class="quick-btn">Call Made</button>
+           <button type="submit" name="action" value="Call Received" class="quick-btn">Call Received</button>
+           <button type="button" onclick="toggleNotes()" class="quick-btn">Add Notes</button>
+       </form>
+   </div>
+
+   <!-- Notes Section (Hidden Initially) -->
+   <div class="block profile-notes" id="notes-block" style="display: none;">
+       <h3>Add Notes</h3>
+       <form action="/update_notes" method="POST">
+           <input type="hidden" name="company_id" value="{{ company.id }}">
+           <textarea name="notes" placeholder="Add notes about this profile">{{ company.notes }}</textarea>
+           <button type="submit" class="dashboard-btn">Save Notes</button>
+       </form>
+   </div>
+
+   <!-- Contracts Section -->
+   <div class="row">
+       <!-- Unpaid Contracts Block -->
+       <div class="block unpaid-contracts">
+           <h3>Unpaid Contracts</h3>
+           {% if unpaid_contracts %}
+           <table>
+               <thead>
+                   <tr>
+                       <th>Contract #</th>
+                       <th>Amount Due</th>
+                       <th>Days Overdue</th>
+                       <th>Actions</th>
+                   </tr>
+               </thead>
+               <tbody>
+                   {% for contract in unpaid_contracts %}
+                   <tr>
+                       <td>{{ contract.contract_number }}</td>
+                       <td>${{ contract.amount_due }}</td>
+                       <td>{{ (now.date() - contract.date_in).days }} days</td>
+                       <td>
+                           <form action="/toggle_paid_status" method="POST">
+                               <input type="hidden" name="company_id" value="{{ company.id }}">
+                               <input type="hidden" name="contract_number" value="{{ contract.contract_number }}">
+                               <button type="submit">
+                                   {% if contract.paid %}
+                                       Revert to Unpaid
+                                   {% else %}
+                                       Mark as Paid
+                                   {% endif %}
+                               </button>
+                           </form>
+                       </td>
+                   </tr>
+                   {% endfor %}
+               </tbody>
+           </table>
+           {% else %}
+           <p>No unpaid contracts available.</p>
+           {% endif %}
+       </div>
+
+       <!-- Paid Contracts Block -->
+       <div class="block paid-contracts">
+           <h3>Paid Contracts</h3>
+           {% if paid_contracts %}
+           <table>
+               <thead>
+                   <tr>
+                       <th>Contract #</th>
+                       <th>Amount Paid</th>
+                       <th>Actions</th>
+                   </tr>
+               </thead>
+               <tbody>
+                   {% for contract in paid_contracts %}
+                   <tr>
+                       <td>{{ contract.contract_number }}</td>
+                       <td>${{ contract.amount_due }}</td>
+                       <td>
+                           <form action="/toggle_paid_status" method="POST">
+                               <input type="hidden" name="company_id" value="{{ company.id }}">
+                               <input type="hidden" name="contract_number" value="{{ contract.contract_number }}">
+                               <button type="submit">Revert to Unpaid</button>
+                           </form>
+                       </td>
+                   </tr>
+                   {% endfor %}
+               </tbody>
+           </table>
+           {% else %}
+           <p>No paid contracts available.</p>
+           {% endif %}
+       </div>
+   </div>
+
+   <!-- Log Activity -->
+   <div class="block activity-section">
+       <h3>Log Activity</h3>
+       <form action="/log_profile_activity" method="POST">
+           <input type="hidden" name="company_id" value="{{ company.id }}">
+           <label for="action">Action:</label>
+           <select name="action" id="action" required>
+               <option value="Updated Contact Information">Updated Contact Information</option>
+               <option value="Marked Contract as Paid">Marked Contract as Paid</option>
+               <option value="Added Note">Added Note</option>
+               <option value="Sent Email">Sent Email</option>
+               <option value="Made Call">Made Call</option>
+           </select>
+           <label for="details">Details:</label>
+           <textarea name="details" id="details" placeholder="Add optional details about the activity"></textarea>
+           <button type="submit" class="dashboard-btn">Log Activity</button>
+       </form>
+   </div>
+
+   <h3>Recent Activity</h3>
+   {% if recent_activity %}
+   <ul>
+       {% for log in recent_activity %}
+       <li>
+           <strong>{{ log.timestamp }}</strong> - {{ log.employee }} performed <em>{{ log.action }}</em>
+           {% if log.details %} ({{ log.details }}){% endif %}
+       </li>
+       {% endfor %}
+   </ul>
+   {% else %}
+   <p>No recent activity available for this company.</p>
+   {% endif %}
+
+</div>
+
+<!-- JavaScript -->
+<script>
+    function toggleNotes() {
+        const notesBlock = document.getElementById('notes-block');
+        notesBlock.style.display = notesBlock.style.display === 'none' ? 'block' : 'none';
+    }
+</script>
+{% endblock %}

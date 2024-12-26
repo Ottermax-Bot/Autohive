@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h2>Current A/R Report</h2>
+
+<!-- Total Outstanding Balance -->
+<div class="summary-container">
+    <p><strong>Total Outstanding Balance: </strong> ${{ total_balance }}</p>
+</div>
+
+<!-- Search Bar -->
+<div class="search-container">
+    <label for="search-input"><strong>Search by Contract #:</strong></label>
+    <input type="text" id="search-input" placeholder="Enter contract number...">
+</div>
+
+<div class="ar-container">
+    {% for company in ar_report %}
+    <div class="company" data-company-name="{{ company.company_name }}">
+        <h3>{{ company.company_name }}</h3>
+        <table class="ar-table">
+            <thead>
+                <tr>
+                    <th>Contract #</th>
+                    <th>Amount Due</th>
+                    <th>Date In</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for contract in company.contracts %}
+                <tr class="contract-row">
+                    <td class="contract-number">{{ contract.contract_number }}</td>
+                    <td>${{ contract.amount_due }}</td>
+                    <td>{{ contract.date_in }}</td>
+                    <td>
+                        <form action="/mark_as_paid" method="POST">
+                            <input type="hidden" name="company" value="{{ company.company_name }}">
+                            <input type="hidden" name="contract_number" value="{{ contract.contract_number }}">
+                            <button type="submit" class="mark-paid-btn">Mark as Paid</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- JavaScript for Dynamic Search -->
+<script>
+    document.getElementById('search-input').addEventListener('input', function() {
+        const searchTerm = this.value.toLowerCase();
+        const companies = document.querySelectorAll('.company');
+
+        companies.forEach(company => {
+            let hasVisibleContract = false;
+
+            const rows = company.querySelectorAll('.contract-row');
+            rows.forEach(row => {
+                const contractNumber = row.querySelector('.contract-number').textContent.toLowerCase();
+                if (contractNumber.includes(searchTerm)) {
+                    row.style.display = ''; // Show matching row
+                    hasVisibleContract = true;
+                } else {
+                    row.style.display = 'none'; // Hide non-matching row
+                }
+            });
+
+            // Hide the company section if no contracts are visible
+            if (hasVisibleContract) {
+                company.style.display = ''; // Show company if it has visible contracts
+            } else {
+                company.style.display = 'none'; // Hide company if no contracts are visible
+            }
+        });
+    });
+</script>
+{% endblock %}

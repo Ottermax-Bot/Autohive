@@ -1,0 +1,32 @@
+<h2>Statistics Report</h2>
+<ul>
+    <li>Total Outstanding Balance: ${{ stats.total_balance }}</li>
+    <li>Total Contracts: {{ stats.total_contracts }}</li>
+    <li>Total Paid Contracts: {{ stats.total_paid_contracts }}</li>
+    <li>Calls Made: {{ stats.calls_made }}</li>
+    <li>Emails Sent: {{ stats.emails_sent }}</li>
+    <li>Attempts Made: {{ stats.attempts_made }}</li>
+    <li>Payments Logged: {{ stats.payments_made }}</li>
+</ul>
+
+<h3>Activity Log</h3>
+<table>
+    <thead>
+        <tr>
+            <th>Date/Time</th>
+            <th>Employee</th>
+            <th>Action</th>
+            <th>Details</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for log in activity_logs %}
+        <tr>
+            <td>{{ log.timestamp }}</td>
+            <td>{{ log.employee }}</td>
+            <td>{{ log.action }}</td>
+            <td>{{ log.details }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>

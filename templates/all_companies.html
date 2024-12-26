@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h2>All Companies</h2>
+
+<!-- Search Bar -->
+<div class="search-container">
+    <form action="/all_companies" method="GET">
+        <input type="text" name="query" placeholder="Search by Company Name or Balance" value="{{ request.args.get('query', '') }}">
+        <button type="submit" class="dashboard-btn">Search</button>
+    </form>
+</div>
+
+<div class="table-container">
+    <table>
+        <thead>
+            <tr>
+                <th>Company Name</th>
+                <th># of Contracts</th>
+                <th>Outstanding Balance</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for company in companies %}
+            <tr>
+                <td>{{ company.name }}</td>
+                <td>{{ company.contracts_count }}</td>
+                <td>${{ "%.2f"|format(company.outstanding_balance) }}</td>
+                <td>
+                  <a href="/company_profile/{{ company.id }}" class="view-profile-btn">View Profile</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

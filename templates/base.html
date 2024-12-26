@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="/static/css/style.css">
+    <title>{{ page_title }}</title>
+</head>
+<body>
+    <div class="layout-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <img src="/static/autohive.png" alt="AutoHive Logo" class="logo">
+            <nav>
+                <ul>
+                    <li><a href="/dashboard">Dashboard</a></li>
+                    <li><a href="/current_ar">Current A/R Report</a></li>
+                    <li><a href="/all_companies">All Companies</a></li>
+                    <li><a href="/upload_ar">Upload A/R Report</a></li>
+                    <li><a href="/activity">View Activity</a></li>
+                    <li><a href="/stats">View Stats</a></li>
+                </ul>
+            </nav>
+        </aside>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <header>
+                <div class="header-content">
+                    {% if request.path != '/dashboard' %}
+                    <a href="/dashboard" class="go-home-btn">Go Home</a>
+                    {% endif %}
+                    <a href="/logout" class="logout-btn">Log Out</a>
+                </div>
+            </header>
+            <main>
+                {% block content %}{% endblock %}
+            </main>
+        </div>
+    </div>
+
+    <style>
+        /* Base Layout */
+        .layout-container {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            background-color: #f4f4f9;
+            width: 250px;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        .sidebar img.logo {
+            display: block;
+            margin: 0 auto 20px;
+            width: 150px;
+        }
+        .sidebar nav ul {
+            list-style: none;
+            padding: 0;
+        }
+        .sidebar nav ul li {
+            margin-bottom: 15px;
+        }
+        .sidebar nav ul li a {
+            text-decoration: none;
+            color: #333;
+            font-weight: bold;
+            transition: color 0.3s ease;
+        }
+        .sidebar nav ul li a:hover {
+            color: #007BFF;
+        }
+
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            padding: 20px;
+        }
+        .header-content {
+            display: flex;
+            justify-content: flex-end;
+            gap: 15px;
+            padding: 10px 0;
+        }
+        .go-home-btn, .logout-btn {
+            text-decoration: none;
+            color: white;
+            background-color: #007BFF;
+            padding: 10px 15px;
+            border-radius: 5px;
+            transition: background-color 0.3s ease;
+        }
+        .go-home-btn:hover, .logout-btn:hover {
+            background-color: #0056b3;
+        }
+
+        /* Mobile Responsiveness */
+        @media (max-width: 768px) {
+            .layout-container {
+                flex-direction: column;
+            }
+            .sidebar {
+                display: none;
+            }
+            .main-content {
+                padding: 10px;
+            }
+        }
+    </style>
+</body>
+</html>

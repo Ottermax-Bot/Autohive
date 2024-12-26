@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="dashboard-container">
+    <h2>Welcome, {{ employee }}!</h2>
+    <p>Overview of activities and alerts:</p>
+
+    <!-- Overdue Contracts Section -->
+    <div class="dashboard-section">
+        <h3>Overdue Contracts (90+ Days)</h3>
+        {% if overdue_contracts %}
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Contract #</th>
+                        <th>Company</th>
+                        <th>Amount Due</th>
+                        <th>Days Overdue</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for contract in overdue_contracts %}
+                    <tr>
+                        <td>{{ contract.contract_number }}</td>
+                        <td>
+                            <a href="{{ url_for('company_profile', company_id=contract.company.id) }}">
+                                {{ contract.company.name }}
+                            </a>
+                        </td>
+                        <td>${{ contract.amount_due }}</td>
+                        <td>{{ (now.date() - contract.date_in).days }} days</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p>No overdue contracts found.</p>
+        {% endif %}
+    </div>
+
+    <!-- Inactive Customers Section -->
+    <div class="dashboard-section">
+        <h3>Inactive Customers (No Contact in 30+ Days)</h3>
+        {% if inactive_customers %}
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Company Name</th>
+                        <th>Contact Person</th>
+                        <th>Last Activity</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for customer in inactive_customers %}
+                    <tr>
+                        <td>
+                            <a href="{{ url_for('company_profile', company_id=customer.id) }}">
+                                {{ customer.name }}
+                            </a>
+                        </td>
+                        <td>{{ customer.contact_person }}</td>
+                        <td>
+                            {% if customer.activities|length > 0 %}
+                            {{ customer.activities[0].timestamp.strftime('%Y-%m-%d %H:%M:%S') }}
+                            {% else %}
+                            No activity logged
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p>All customers are active.</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

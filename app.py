@@ -133,10 +133,19 @@ class ActivityLog(db.Model):
 
 
 # Auto-migrate database on app start (for Render or production environments)
-@app.before_request
-def setup():
-    # Code to run before every request
-    print("Running setup before request")
+@app.before_first_request
+def setup_database():
+    """
+    Runs once before the first request to ensure the database is initialized.
+    If tables do not exist, they will be created automatically.
+    """
+    try:
+        with app.app_context():
+            # Check if tables exist; if not, create them
+            db.create_all()
+            print("Database tables created successfully.")
+    except Exception as e:
+        print(f"Error during database setup: {e}")
 
         
         

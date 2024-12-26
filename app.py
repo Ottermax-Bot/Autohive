@@ -8,6 +8,8 @@ from logging.handlers import RotatingFileHandler
 import os
 from dotenv import load_dotenv
 
+
+
 # Load environment variables from .env file (if present)
 load_dotenv()
 
@@ -129,6 +131,14 @@ class ActivityLog(db.Model):
     details = db.Column(db.Text)
     company_id = db.Column(db.Integer, db.ForeignKey('company.id'), nullable=False)
 
+
+# Auto-migrate database on app start (for Render or production environments)
+@app.before_first_request
+def initialize_database():
+    with app.app_context():
+        upgrade()  # Runs migrations
+        
+        
 @app.context_processor
 def inject_now():
     return {"now": datetime.now()}

@@ -6,6 +6,10 @@ import pandas as pd
 import logging
 from logging.handlers import RotatingFileHandler
 import os
+from dotenv import load_dotenv
+
+# Load environment variables from .env file (if present)
+load_dotenv()
 
 # Flask Application Setup
 app = Flask(__name__)
@@ -15,11 +19,13 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)  # Create uploads folder if it doesn't
 app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
 
 # SQLAlchemy Configuration
-app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///crm.db"  # Replace with your database URI
+app.config["SQLALCHEMY_DATABASE_URI"] = os.getenv(
+    "DATABASE_URL", "postgresql://autohive_user:uEGA0sF07nf7L0PDFaBOwomlkuPMeqCT@dpg-ctmnsea3esus739r3m30-a.oregon-postgres.render.com/autohive_db"
+)  # Read from environment variable or fallback to hardcoded URI
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
-db = SQLAlchemy(app)
 
-# Initialize Flask-Migrate
+# Initialize SQLAlchemy and Flask-Migrate
+db = SQLAlchemy(app)
 migrate = Migrate(app, db)
 
 # Set up logging

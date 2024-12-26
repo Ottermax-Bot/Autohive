@@ -8,4 +8,5 @@ SQLAlchemy
 WeasyPrint
 gunicorn
 pandas
+psycopg2-binary
 

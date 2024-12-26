@@ -4,70 +4,28 @@
 <h2>{{ company.name }} Profile</h2>
 
 <div class="main-container">
-
-   <!-- Company Information and Statistics -->
-   <div class="row">
-       <!-- Company Information Block -->
-       <div class="block company-info">
-           <h3>Company Information</h3>
-           
-           <!-- Contact Person -->
-           <p>
-               <strong>Contact Person:</strong> 
-               {{ company.contact_person or "N/A" }}
-           </p>
-           
-           <!-- Phone Number -->
-           <p>
-               <strong>Phone Number:</strong> 
-               {{ company.phone_number or "N/A" }}
-           </p>
-           
-           <!-- Email -->
-           <p>
-               <strong>Email:</strong> 
-               {% if company.email %}
-                   <a href="mailto:{{ company.email }}">{{ company.email }}</a>
-               {% else %}
-                   N/A
-               {% endif %}
-           </p>
-           
-           <!-- Address -->
-           <p>
-               <strong>Address:</strong> 
-               {{ company.address or "N/A" }}
-           </p>
-
-           <!-- Alternative Contacts -->
-           {% if company.alternative_contacts %}
-           <h4>Alternative Contacts:</h4>
-           <ul>
-               {% for contact in company.alternative_contacts %}
-               <li>
-                   <strong>{{ contact.name or "N/A" }}</strong> - 
-                   {{ contact.phone or "N/A" }} - 
-                   {% if contact.email %}
-                       <a href="mailto:{{ contact.email }}">{{ contact.email }}</a>
-                   {% else %}
-                       N/A
-                   {% endif %}
-               </li>
-               {% endfor %}
-           </ul>
+   <!-- Company Information -->
+   <div class="block company-info">
+       <h3>Company Information</h3>
+       <p><strong>Contact Person:</strong> {{ company.contact_person or "N/A" }}</p>
+       <p><strong>Phone Number:</strong> {{ company.phone_number or "N/A" }}</p>
+       <p><strong>Email:</strong> 
+           {% if company.email %}
+               <a href="mailto:{{ company.email }}">{{ company.email }}</a>
            {% else %}
-           <p><em>No alternative contacts listed.</em></p>
+               N/A
            {% endif %}
-       </div>
+       </p>
+       <p><strong>Address:</strong> {{ company.address or "N/A" }}</p>
    </div>
 
-   <!-- Statistics Block -->
+   <!-- Statistics -->
    <div class="block statistics">
        <h3>Statistics</h3>
        <p><strong>Total Contracts:</strong> {{ contracts | length }}</p>
-       <p><strong>Total Money Spent:</strong> ${{ total_paid + total_unpaid }}</p>
-       <p><strong>Total Unpaid:</strong> ${{ total_unpaid }}</p>
-       <p><strong>Total Paid:</strong> ${{ total_paid }}</p>
+       <p><strong>Total Money Spent:</strong> ${{ (total_paid + total_unpaid) | round(2) }}</p>
+       <p><strong>Total Unpaid:</strong> ${{ total_unpaid | round(2) }}</p>
+       <p><strong>Total Paid:</strong> ${{ total_paid | round(2) }}</p>
    </div>
 
    <!-- Quick Actions -->
@@ -82,21 +40,27 @@
        </form>
    </div>
 
-   <!-- Notes Section (Hidden Initially) -->
+   <!-- Notes Section -->
    <div class="block profile-notes" id="notes-block" style="display: none;">
        <h3>Add Notes</h3>
        <form action="/update_notes" method="POST">
            <input type="hidden" name="company_id" value="{{ company.id }}">
-           <textarea name="notes" placeholder="Add notes about this profile">{{ company.notes }}</textarea>
-           <button type="submit" class="dashboard-btn">Save Notes</button>
+           <textarea name="notes" placeholder="Add notes about this profile"></textarea>
+           <button type="submit" class="dashboard-btn">Save Note</button>
        </form>
+       <h4>Existing Notes:</h4>
+       <ul>
+           {% for note in company.notes.split('\n') %}
+           <li>{{ note }}</li>
+           {% endfor %}
+       </ul>
    </div>
 
    <!-- Contracts Section -->
-   <div class="row">
-       <!-- Unpaid Contracts Block -->
-       <div class="block unpaid-contracts">
-           <h3>Unpaid Contracts</h3>
+   <div class="block contracts">
+       <h3>Contracts</h3>
+       <div class="unpaid-contracts">
+           <h4>Unpaid Contracts</h4>
            {% if unpaid_contracts %}
            <table>
                <thead>
@@ -111,7 +75,7 @@
                    {% for contract in unpaid_contracts %}
                    <tr>
                        <td>{{ contract.contract_number }}</td>
-                       <td>${{ contract.amount_due }}</td>
+                       <td>${{ contract.amount_due | round(2) }}</td>
                        <td>{{ (now.date() - contract.date_in).days }} days</td>
                        <td>
                            <form action="/toggle_paid_status" method="POST">
@@ -135,9 +99,8 @@
            {% endif %}
        </div>
 
-       <!-- Paid Contracts Block -->
-       <div class="block paid-contracts">
-           <h3>Paid Contracts</h3>
+       <div class="paid-contracts">
+           <h4>Paid Contracts</h4>
            {% if paid_contracts %}
            <table>
                <thead>
@@ -151,7 +114,7 @@
                    {% for contract in paid_contracts %}
                    <tr>
                        <td>{{ contract.contract_number }}</td>
-                       <td>${{ contract.amount_due }}</td>
+                       <td>${{ contract.amount_due | round(2) }}</td>
                        <td>
                            <form action="/toggle_paid_status" method="POST">
                                <input type="hidden" name="company_id" value="{{ company.id }}">
@@ -169,46 +132,53 @@
        </div>
    </div>
 
-   <!-- Log Activity -->
-   <div class="block activity-section">
-       <h3>Log Activity</h3>
-       <form action="/log_profile_activity" method="POST">
-           <input type="hidden" name="company_id" value="{{ company.id }}">
-           <label for="action">Action:</label>
-           <select name="action" id="action" required>
-               <option value="Updated Contact Information">Updated Contact Information</option>
-               <option value="Marked Contract as Paid">Marked Contract as Paid</option>
-               <option value="Added Note">Added Note</option>
-               <option value="Sent Email">Sent Email</option>
-               <option value="Made Call">Made Call</option>
-           </select>
-           <label for="details">Details:</label>
-           <textarea name="details" id="details" placeholder="Add optional details about the activity"></textarea>
-           <button type="submit" class="dashboard-btn">Log Activity</button>
-       </form>
+   <!-- Edit Profile Section -->
+   <div class="block edit-profile">
+       <button onclick="toggleEditProfile()">Edit Profile</button>
+       <div id="edit-profile-form" style="display: none;">
+           <h3>Edit Profile</h3>
+            <form action="/update_company_details" method="POST">
+                <input type="hidden" name="company_id" value="{{ company.id }}">
+                
+                <label for="contact_person">Contact Person:</label>
+                <input type="text" name="contact_person" placeholder="Enter name" value="{{ company.contact_person }}">
+                
+                <label for="phone_number">Phone Number:</label>
+                <input type="text" name="phone_number" placeholder="Enter phone number" value="{{ company.phone_number }}">
+                
+                <label for="email">Email:</label>
+                <input type="email" name="email" placeholder="Enter email address" value="{{ company.email }}">
+                
+                <label for="address">Address:</label>
+                <input type="text" name="address" placeholder="Enter address" value="{{ company.address }}">
+                
+                <h4>Alternative Contacts</h4>
+                <div class="alternative-contact">
+                    <label for="alt_contact_name">Name:</label>
+                    <input type="text" name="alt_contact_name" placeholder="Enter name">
+                    
+                    <label for="alt_contact_phone">Phone:</label>
+                    <input type="text" name="alt_contact_phone" placeholder="Enter phone number">
+                    
+                    <label for="alt_contact_email">Email:</label>
+                    <input type="email" name="alt_contact_email" placeholder="Enter email">
+                </div>
+                
+                <button type="submit" class="dashboard-btn">Save Changes</button>
+            </form>
+       </div>
    </div>
-
-   <h3>Recent Activity</h3>
-   {% if recent_activity %}
-   <ul>
-       {% for log in recent_activity %}
-       <li>
-           <strong>{{ log.timestamp }}</strong> - {{ log.employee }} performed <em>{{ log.action }}</em>
-           {% if log.details %} ({{ log.details }}){% endif %}
-       </li>
-       {% endfor %}
-   </ul>
-   {% else %}
-   <p>No recent activity available for this company.</p>
-   {% endif %}
-
 </div>
 
-<!-- JavaScript -->
 <script>
     function toggleNotes() {
         const notesBlock = document.getElementById('notes-block');
         notesBlock.style.display = notesBlock.style.display === 'none' ? 'block' : 'none';
+    }
+
+    function toggleEditProfile() {
+        const editForm = document.getElementById('edit-profile-form');
+        editForm.style.display = editForm.style.display === 'none' ? 'block' : 'none';
     }
 </script>
 {% endblock %}

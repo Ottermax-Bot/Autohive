@@ -133,10 +133,11 @@ class ActivityLog(db.Model):
 
 
 # Auto-migrate database on app start (for Render or production environments)
-@app.before_first_request
-def initialize_database():
-    with app.app_context():
-        upgrade()  # Runs migrations
+@app.before_request
+def setup():
+    # Code to run before every request
+    print("Running setup before request")
+
         
         
 @app.context_processor

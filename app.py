@@ -159,6 +159,11 @@ def login():
         else:
             flash("Please select an employee to log in.")
     return render_template("login.html", page_title="Login")
+    
+@app.route("/logout")
+def logout():
+    session.pop("employee", None)  # Remove 'employee' from the session
+    return redirect(url_for("login"))
 
 
 

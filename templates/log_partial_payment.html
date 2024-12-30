@@ -3,11 +3,39 @@
 <h2>Log Partial Payment</h2>
 <form method="POST" action="{{ url_for('log_partial_payment') }}">
     <label for="contract_number">Contract #:</label>
-    <input type="text" name="contract_number" id="contract_number" required>
+    <input type="text" name="contract_number" id="contract_number" required oninput="fetchContracts(this.value)">
+    <ul id="contract-suggestions" style="display: none;"></ul>
     
     <label for="payment_amount">Payment Amount:</label>
     <input type="number" step="0.01" name="payment_amount" id="payment_amount" required>
     
     <button type="submit" class="dashboard-btn">Log Payment</button>
 </form>
+
+<script>
+    function fetchContracts(query) {
+        if (query.length < 2) {
+            document.getElementById('contract-suggestions').style.display = 'none';
+            return;
+        }
+
+        fetch(`/search_contracts?q=${query}`)
+            .then(response => response.json())
+            .then(data => {
+                const suggestions = document.getElementById('contract-suggestions');
+                suggestions.innerHTML = '';
+                data.forEach(contract => {
+                    const li = document.createElement('li');
+                    li.textContent = `#${contract.contract_number} - $${contract.amount_due} (${contract.company_name})`;
+                    li.onclick = () => {
+                        document.getElementById('contract_number').value = contract.contract_number;
+                        suggestions.style.display = 'none';
+                    };
+                    suggestions.appendChild(li);
+                });
+                suggestions.style.display = 'block';
+            })
+            .catch(error => console.error('Error fetching contracts:', error));
+    }
+</script>
 {% endblock %}

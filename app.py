@@ -1,4 +1,4 @@
-from flask import Flask, request, render_template, redirect, url_for, flash, session
+from flask import Flask, request, render_template, redirect, url_for, flash, session, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from datetime import datetime, timedelta
@@ -7,8 +7,6 @@ import logging
 from logging.handlers import RotatingFileHandler
 import os
 from dotenv import load_dotenv
-
-
 
 # Load environment variables from .env file (if present)
 load_dotenv()
@@ -22,8 +20,8 @@ app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
 
 # SQLAlchemy Configuration
 app.config["SQLALCHEMY_DATABASE_URI"] = os.getenv(
-    "DATABASE_URL", "postgresql://autohive_user:uEGA0sF07nf7L0PDFaBOwomlkuPMeqCT@dpg-ctmnsea3esus739r3m30-a.oregon-postgres.render.com/autohive_db"
-)  # Read from environment variable or fallback to hardcoded URI
+    "DATABASE_URL", "sqlite:///crm.db"
+)  # Read from environment variable or fallback to SQLite
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
 # Initialize SQLAlchemy and Flask-Migrate
@@ -39,14 +37,8 @@ app.logger.addHandler(handler)
 app.logger.setLevel(logging.INFO)
 
 
+# Log activity function
 def log_activity(employee, action, details, company_id=None):
-    """
-    Logs an activity to the ActivityLog table.
-    :param employee: Name of the employee performing the action.
-    :param action: Action performed (e.g., 'Updated Contact Info').
-    :param details: Details about the action.
-    :param company_id: (Optional) ID of the company related to the action.
-    """
     activity = ActivityLog(
         employee=employee,
         action=action,
@@ -116,12 +108,11 @@ class AlternativeContact(db.Model):
 class Contract(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     contract_number = db.Column(db.String(50), nullable=False)
+    original_amount = db.Column(db.Float, default=0.0)  # Keeps the original contract amount
     amount_due = db.Column(db.Float, default=0.0)
     date_in = db.Column(db.Date, nullable=False)
     paid = db.Column(db.Boolean, default=False)
-    reverted = db.Column(db.Boolean, default=False)
     company_id = db.Column(db.Integer, db.ForeignKey('company.id'), nullable=False)
-
 
 class ActivityLog(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -209,70 +200,40 @@ def upload_ar():
 
                 # Update the database with new data
                 for company_name, details in new_data.items():
-                    # Check if the company already exists in the database
                     company = Company.query.filter_by(name=company_name).first()
                     if not company:
-                        # Add new company if it doesn't exist
                         company = Company(name=company_name)
                         db.session.add(company)
                         db.session.commit()
 
-                    # Process contracts for the company
                     existing_contracts = {c.contract_number: c for c in company.contracts}
                     for contract_data in details["contracts"]:
                         contract_number = contract_data["contract_number"]
-
-                        try:
-                            # Check for existing contract and update or create
-                            if contract_number in existing_contracts:
-                                contract = existing_contracts[contract_number]
-                                original_amount_due = float(contract_data["amount_due"])
-                                
-                                # Adjust amount_due based on partial payments
-                                total_payments_made = original_amount_due - contract.amount_due
-                                contract.amount_due = original_amount_due - total_payments_made
-                                
-                                contract.paid = bool(contract_data["paid"])
-                                contract.date_in = datetime.strptime(
-                                    contract_data["date_in"], "%m/%d/%Y"
-                                )
-                            else:
-                                # Add new contract
-                                new_contract = Contract(
-                                    contract_number=contract_number,
-                                    amount_due=float(contract_data["amount_due"]),
-                                    date_in=datetime.strptime(
-                                        contract_data["date_in"], "%m/%d/%Y"
-                                    ),
-                                    paid=bool(contract_data["paid"]),
-                                    company_id=company.id,
-                                )
-                                db.session.add(new_contract)
-                        except Exception as contract_error:
-                            print(
-                                f"Error processing contract {contract_number} for company {company_name}: {contract_error}"
+                        if contract_number in existing_contracts:
+                            contract = existing_contracts[contract_number]
+                            contract.amount_due = max(0, float(contract_data["amount_due"]))  # Prevent negative values
+                        else:
+                            new_contract = Contract(
+                                contract_number=contract_number,
+                                original_amount=float(contract_data["amount_due"]),
+                                amount_due=float(contract_data["amount_due"]),
+                                date_in=datetime.strptime(contract_data["date_in"], "%m/%d/%Y"),
+                                paid=bool(contract_data["paid"]),
+                                company_id=company.id,
                             )
+                            db.session.add(new_contract)
 
                     db.session.commit()
 
                 flash("A/R Report uploaded and processed successfully!", "success")
-            except ValueError as ve:
-                print(f"ValueError during upload: {ve}")  # Debugging
-                flash(str(ve), "error")
             except Exception as e:
-                print(f"Unexpected error: {e}")  # Debugging
-                flash("An error occurred while processing the file. Please try again.", "error")
+                app.logger.error(f"Error processing upload: {e}")
+                flash("An error occurred while processing the file.", "error")
         else:
             flash("Invalid file type. Please upload an Excel file.", "error")
 
-    # Retrieve all companies to display on the page
     companies = Company.query.all()
-    return render_template(
-        "upload_ar.html",
-        employee=session["employee"],
-        profiles=companies,
-        page_title="Upload A/R Report",
-    )
+    return render_template("upload_ar.html", companies=companies)
 
 
 
@@ -397,7 +358,27 @@ def company_profile(company_id):
     )
 
 
+@app.route("/search_contracts", methods=["GET"])
+def search_contracts():
+    query = request.args.get("q", "")
+    results = Contract.query.filter(Contract.contract_number.like(f"%{query}%")).all()
+    contracts = [
+        {
+            "contract_number": c.contract_number,
+            "amount_due": c.amount_due,
+            "company_name": c.company.name
+        }
+        for c in results
+    ]
+    return jsonify(contracts)
 
+# Helper functions
+def is_logged_in():
+    return "employee" in session
+
+def process_excel(filepath):
+    # Simulated function for processing Excel
+    return {}
 
 
 
@@ -728,14 +709,12 @@ def log_partial_payment():
             flash("Contract not found.", "error")
             return redirect(url_for("log_partial_payment"))
 
-        # Deduct payment from the amount due
         if payment_amount > 0 and payment_amount <= contract.amount_due:
             contract.amount_due -= payment_amount
-            # Log activity (optional)
             log_activity(
-                session["employee"],
+                session.get("employee", "Unknown"),
                 "Partial Payment",
-                f"${payment_amount} payment logged for contract {contract_number}",
+                f"Partial payment of ${payment_amount:.2f} logged for contract {contract_number}.",
                 company_id=contract.company_id
             )
             db.session.commit()

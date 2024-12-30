@@ -212,67 +212,65 @@ def upload_ar():
                 # Process the uploaded file
                 new_data = process_excel(filepath)
 
-                # Update the database with new data
                 for company_name, details in new_data.items():
-                    # Check if the company already exists in the database
+                    # Check if the company exists
                     company = Company.query.filter_by(name=company_name).first()
                     if not company:
-                        # Add new company if it doesn't exist
                         company = Company(name=company_name)
                         db.session.add(company)
                         db.session.commit()
 
-                    # Process contracts for the company
+                    # Existing contracts for the company
                     existing_contracts = {c.contract_number: c for c in company.contracts}
+
+                    # Process uploaded contracts
+                    uploaded_contract_numbers = []
                     for contract_data in details["contracts"]:
                         contract_number = contract_data["contract_number"]
+                        uploaded_contract_numbers.append(contract_number)
 
-                        try:
-                            # Check for existing contract and update or create
-                            if contract_number in existing_contracts:
-                                contract = existing_contracts[contract_number]
-                                contract.amount_due = float(contract_data["amount_due"])
-                                contract.paid = bool(contract_data["paid"])
-                                contract.date_in = datetime.strptime(
-                                    contract_data["date_in"], "%m/%d/%Y"
-                                )
-                            else:
-                                # Add new contract
-                                new_contract = Contract(
-                                    contract_number=contract_number,
-                                    amount_due=float(contract_data["amount_due"]),
-                                    date_in=datetime.strptime(
-                                        contract_data["date_in"], "%m/%d/%Y"
-                                    ),
-                                    paid=bool(contract_data["paid"]),
-                                    company_id=company.id,
-                                )
-                                db.session.add(new_contract)
-                        except Exception as contract_error:
-                            print(
-                                f"Error processing contract {contract_number} for company {company_name}: {contract_error}"
+                        if contract_number in existing_contracts:
+                            # Update existing contract
+                            contract = existing_contracts[contract_number]
+                            contract.amount_due = float(contract_data["amount_due"])
+                            contract.paid = bool(contract_data["paid"])
+                            contract.date_in = datetime.strptime(
+                                contract_data["date_in"], "%m/%d/%Y"
                             )
+                        else:
+                            # Add new contract
+                            new_contract = Contract(
+                                contract_number=contract_number,
+                                amount_due=float(contract_data["amount_due"]),
+                                original_amount=float(contract_data["amount_due"]),
+                                date_in=datetime.strptime(
+                                    contract_data["date_in"], "%m/%d/%Y"
+                                ),
+                                paid=bool(contract_data["paid"]),
+                                company_id=company.id,
+                            )
+                            db.session.add(new_contract)
+
+                    # Mark contracts as paid if they are missing in the uploaded file
+                    for contract_number, contract in existing_contracts.items():
+                        if contract_number not in uploaded_contract_numbers:
+                            contract.paid = True
 
                     db.session.commit()
 
                 flash("A/R Report uploaded and processed successfully!", "success")
             except ValueError as ve:
-                print(f"ValueError during upload: {ve}")  # Debugging
+                app.logger.error(f"ValueError during upload: {ve}")
                 flash(str(ve), "error")
             except Exception as e:
-                print(f"Unexpected error: {e}")  # Debugging
+                app.logger.error(f"Unexpected error during upload: {e}")
                 flash("An error occurred while processing the file. Please try again.", "error")
         else:
             flash("Invalid file type. Please upload an Excel file.", "error")
 
-    # Retrieve all companies to display on the page
     companies = Company.query.all()
-    return render_template(
-        "upload_ar.html",
-        employee=session["employee"],
-        profiles=companies,
-        page_title="Upload A/R Report",
-    )
+    return render_template("upload_ar.html", companies=companies)
+
 
 
 
@@ -570,42 +568,24 @@ def process_excel(filepath):
     # Fill missing cells with empty strings to avoid issues
     df.fillna("", inplace=True)
 
+    # Dictionary to hold processed data
+    processed_data = {}
+
     for _, row in df.iterrows():
         company_name = row["Company Name"]
         if company_name:
-            # Check if the company already exists in the database
-            company = Company.query.filter_by(name=company_name).first()
-            if not company:
-                # Add new company with default values for missing fields
-                company = Company(
-                    name=company_name,
-                    contact_person="Unknown Contact",
-                    phone_number="N/A",
-                    email="N/A",
-                    address="N/A",
-                    notes="No additional notes provided."
-                )
-                db.session.add(company)
-                db.session.commit()
+            if company_name not in processed_data:
+                processed_data[company_name] = {"contracts": []}
 
-            # Add or update contracts
-            contract = Contract.query.filter_by(contract_number=row["Contract #"], company_id=company.id).first()
-            if not contract:
-                contract = Contract(
-                    company_id=company.id,
-                    contract_number=row["Contract #"],
-                    amount_due=float(row["A/R Amt"]) if row["A/R Amt"] else 0.0,
-                    date_in=datetime.strptime(row["Date In"], "%m/%d/%Y") if row["Date In"] else datetime.now(),
-                    paid=row["Paid"] == "Yes"
-                )
-                db.session.add(contract)
-            else:
-                # Update contract details if it already exists
-                contract.amount_due = float(row["A/R Amt"]) if row["A/R Amt"] else 0.0
-                contract.paid = row["Paid"] == "Yes"
-                contract.date_in = datetime.strptime(row["Date In"], "%m/%d/%Y") if row["Date In"] else datetime.now()
+            # Add contract data
+            processed_data[company_name]["contracts"].append({
+                "contract_number": row["Contract #"],
+                "amount_due": float(row["A/R Amt"]) if row["A/R Amt"] else 0.0,
+                "date_in": row["Date In"],
+                "paid": row["Paid"] == "Yes"
+            })
 
-    db.session.commit()
+    return processed_data
 
 
 

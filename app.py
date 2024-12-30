@@ -716,6 +716,34 @@ def log_profile_activity():
     flash(f"Activity logged: {action} for {company.name}.", "success")
     return redirect(url_for("company_profile", company_id=company.id))
 
+@app.route("/log_partial_payment", methods=["GET", "POST"])
+def log_partial_payment():
+    if request.method == "POST":
+        contract_number = request.form.get("contract_number")
+        payment_amount = float(request.form.get("payment_amount", 0))
+
+        # Fetch the contract
+        contract = Contract.query.filter_by(contract_number=contract_number).first()
+        if not contract:
+            flash("Contract not found.", "error")
+            return redirect(url_for("log_partial_payment"))
+
+        # Deduct payment from the amount due
+        if payment_amount > 0 and payment_amount <= contract.amount_due:
+            contract.amount_due -= payment_amount
+            # Log activity (optional)
+            log_activity(
+                session["employee"],
+                "Partial Payment",
+                f"${payment_amount} payment logged for contract {contract_number}",
+                company_id=contract.company_id
+            )
+            db.session.commit()
+            flash(f"Partial payment of ${payment_amount:.2f} applied to contract {contract_number}.", "success")
+        else:
+            flash("Invalid payment amount.", "error")
+
+    return render_template("log_partial_payment.html")
 
 
 

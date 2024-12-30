@@ -141,6 +141,26 @@ def run_migrations():
     except Exception as e:
         return f"An error occurred: {e}", 500
 
+@app.route("/reset-database", methods=["GET"])
+def reset_database():
+    """
+    Reset the database by dropping all tables and recreating them.
+    USE WITH CAUTION! This should only be enabled in a safe testing environment.
+    """
+    if not is_logged_in():  # Optional: Check if the user is logged in
+        return "Unauthorized access. Please log in.", 403
+
+    from flask_migrate import upgrade
+    try:
+        # Drop all tables
+        db.drop_all()
+        # Recreate tables
+        db.create_all()
+        # Optionally run migrations after recreation
+        upgrade()
+        return "Database has been reset successfully!", 200
+    except Exception as e:
+        return f"An error occurred during database reset: {e}", 500
 
         
         

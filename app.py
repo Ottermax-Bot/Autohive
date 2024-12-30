@@ -155,33 +155,32 @@ def login():
 
 @app.route("/dashboard")
 def dashboard():
-    if not is_logged_in():
-        return redirect(url_for("login"))
+    try:
+        overdue_threshold = datetime.now() - timedelta(days=90)
+        # Debug query
+        print("Checking overdue contracts...")
+        overdue_contracts = Contract.query.filter(
+            Contract.date_in <= overdue_threshold, Contract.paid == False
+        ).all()
+        print(f"Overdue Contracts: {overdue_contracts}")
 
-    # Calculate overdue contracts (90+ days overdue)
-    overdue_threshold = datetime.now() - timedelta(days=90)
-    overdue_contracts = Contract.query.filter(
-        Contract.date_in <= overdue_threshold, Contract.paid == False
-    ).all()
+        # Debug inactive customers
+        contact_threshold = datetime.now() - timedelta(days=30)
+        print("Checking inactive customers...")
+        inactive_customers = Company.query.filter(
+            ~Company.activities.any(ActivityLog.timestamp >= contact_threshold)
+        ).all()
+        print(f"Inactive Customers: {inactive_customers}")
 
-    # Calculate inactive customers (no activity in 30+ days)
-    contact_threshold = datetime.now() - timedelta(days=30)
-    inactive_customers = Company.query.filter(
-        ~Company.activities.any(ActivityLog.timestamp >= contact_threshold)
-    ).all()
+        return render_template(
+            "dashboard.html",
+            overdue_contracts=overdue_contracts,
+            inactive_customers=inactive_customers,
+        )
+    except Exception as e:
+        print(f"Error in dashboard route: {e}")
+        return f"Error in dashboard: {e}", 500
 
-    # Pass `now` to the template for date calculations
-    now = datetime.now()
-
-    # Render the dashboard with all the required data
-    return render_template(
-        "dashboard.html",
-        employee=session["employee"],
-        page_title="Dashboard",
-        overdue_contracts=overdue_contracts,
-        inactive_customers=inactive_customers,
-        now=now,  # Pass current datetime to the template
-    )
 
 @app.route("/upload_ar", methods=["GET", "POST"])
 def upload_ar():
@@ -452,32 +451,28 @@ def update_company_details():
 
 @app.route("/stats")
 def stats():
-    if not is_logged_in():
-        return redirect(url_for("login"))
+    try:
+        print("Fetching total balance...")
+        total_balance = db.session.query(db.func.sum(Contract.amount_due)).filter_by(paid=False).scalar() or 0
+        print(f"Total Balance: {total_balance}")
 
-    # Fetch data
-    total_balance = db.session.query(db.func.sum(Contract.amount_due)).filter_by(paid=False).scalar() or 0
-    total_contracts = Contract.query.count()
-    total_paid_contracts = Contract.query.filter_by(paid=True).count()
+        print("Counting contracts...")
+        total_contracts = Contract.query.count()
+        print(f"Total Contracts: {total_contracts}")
 
-    # Fetch actions
-    calls_made = ActivityLog.query.filter_by(action="Call Made").count()
-    emails_sent = ActivityLog.query.filter_by(action="Email Sent").count()
-    attempts_made = calls_made + emails_sent
-    payments_made = ActivityLog.query.filter_by(action="Marked as Paid").count()
+        print("Counting paid contracts...")
+        total_paid_contracts = Contract.query.filter_by(paid=True).count()
+        print(f"Total Paid Contracts: {total_paid_contracts}")
 
-    return render_template(
-        "stats.html",
-        employee=session["employee"],
-        page_title="Statistics",
-        total_balance=total_balance,
-        total_contracts=total_contracts,
-        total_paid_contracts=total_paid_contracts,
-        calls_made=calls_made,
-        emails_sent=emails_sent,
-        attempts_made=attempts_made,
-        payments_made=payments_made,
-    )
+        return render_template(
+            "stats.html",
+            total_balance=total_balance,
+            total_contracts=total_contracts,
+            total_paid_contracts=total_paid_contracts,
+        )
+    except Exception as e:
+        print(f"Error in stats route: {e}")
+        return f"Error in stats: {e}", 500
 
 
 

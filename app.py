@@ -254,6 +254,7 @@ def upload_ar():
 
 
 
+
 @app.route("/current_ar")
 def current_ar():
     if not is_logged_in():
@@ -548,34 +549,35 @@ def process_excel(filepath):
     # Fill missing cells with empty strings to avoid issues
     df.fillna("", inplace=True)
 
-    # Dictionary to store processed companies
-    processed_companies = {}
+    # Dictionary to store contracts from the uploaded file
+    processed_contracts = {}
 
     for _, row in df.iterrows():
         company_name = row["Company Name"]
         if company_name:
             # Check if the company already exists in the database
-            if company_name in processed_companies:
-                company = processed_companies[company_name]
-            else:
-                company = Company.query.filter_by(name=company_name).first()
-                if not company:
-                    # Add new company with default values for missing fields
-                    company = Company(
-                        name=company_name,
-                        contact_person="Unknown Contact",
-                        phone_number="N/A",
-                        email="N/A",
-                        address="N/A",
-                        notes="No additional notes provided."
-                    )
-                    db.session.add(company)
-                    db.session.commit()  # Commit to assign an ID to the new company
-                processed_companies[company_name] = company
+            company = Company.query.filter_by(name=company_name).first()
+            if not company:
+                # Add new company with default values for missing fields
+                company = Company(
+                    name=company_name,
+                    contact_person="Unknown Contact",
+                    phone_number="N/A",
+                    email="N/A",
+                    address="N/A",
+                    notes="No additional notes provided."
+                )
+                db.session.add(company)
+                db.session.commit()  # Commit to assign an ID to the new company
+
+            # Track contracts for this company
+            if company.id not in processed_contracts:
+                processed_contracts[company.id] = set()
 
             # Add or update contracts
             contract_number = row["Contract #"]
             if contract_number:
+                processed_contracts[company.id].add(contract_number)
                 contract = Contract.query.filter_by(contract_number=contract_number, company_id=company.id).first()
                 if not contract:
                     contract = Contract(
@@ -591,6 +593,19 @@ def process_excel(filepath):
                     contract.amount_due = float(row["A/R Amt"]) if row["A/R Amt"] else 0.0
                     contract.paid = row["Paid"] == "Yes"
                     contract.date_in = datetime.strptime(row["Date In"], "%m/%d/%Y") if row["Date In"] else datetime.now()
+
+    # Mark contracts as paid if they are missing from the uploaded file
+    for company_id, uploaded_contracts in processed_contracts.items():
+        existing_contracts = Contract.query.filter_by(company_id=company_id).all()
+        for contract in existing_contracts:
+            if contract.contract_number not in uploaded_contracts and not contract.paid:
+                contract.paid = True  # Mark as paid
+                log_activity(
+                    employee="System",
+                    action="Marked as Paid",
+                    details=f"Contract {contract.contract_number} automatically marked as paid during upload.",
+                    company_id=company_id
+                )
 
     # Commit all changes at once
     db.session.commit()

@@ -226,7 +226,12 @@ def upload_ar():
                             # Check for existing contract and update or create
                             if contract_number in existing_contracts:
                                 contract = existing_contracts[contract_number]
-                                contract.amount_due = float(contract_data["amount_due"])
+                                original_amount_due = float(contract_data["amount_due"])
+                                
+                                # Adjust amount_due based on partial payments
+                                total_payments_made = original_amount_due - contract.amount_due
+                                contract.amount_due = original_amount_due - total_payments_made
+                                
                                 contract.paid = bool(contract_data["paid"])
                                 contract.date_in = datetime.strptime(
                                     contract_data["date_in"], "%m/%d/%Y"

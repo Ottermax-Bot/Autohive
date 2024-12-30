@@ -12,6 +12,33 @@
     <button type="submit" class="dashboard-btn">Log Payment</button>
 </form>
 
+<h3>Recent Partial Payments (Past 30 Days)</h3>
+<table>
+    <thead>
+        <tr>
+            <th>Contract #</th>
+            <th>Payment Amount</th>
+            <th>Timestamp</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for payment in recent_payments %}
+        <tr>
+            <td>{{ payment.details.split("logged for contract")[1].strip() }}</td>
+            <td>{{ payment.details.split("$")[1].split(" ")[0] }}</td>
+            <td>{{ payment.timestamp }}</td>
+            <td>
+                <form method="POST" action="{{ url_for('revert_partial_payment') }}">
+                    <input type="hidden" name="activity_id" value="{{ payment.id }}">
+                    <button type="submit" class="dashboard-btn">Revert</button>
+                </form>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
 <script>
     function fetchContracts(query) {
         if (query.length < 2) {

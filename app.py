@@ -709,6 +709,7 @@ def log_partial_payment():
             flash("Contract not found.", "error")
             return redirect(url_for("log_partial_payment"))
 
+        # Deduct the payment amount
         if payment_amount > 0 and payment_amount <= contract.amount_due:
             contract.amount_due -= payment_amount
             log_activity(
@@ -722,8 +723,47 @@ def log_partial_payment():
         else:
             flash("Invalid payment amount.", "error")
 
-    return render_template("log_partial_payment.html")
+    # Fetch partial payments from the past 30 days
+    thirty_days_ago = datetime.utcnow() - timedelta(days=30)
+    recent_payments = ActivityLog.query.filter(
+        ActivityLog.action == "Partial Payment",
+        ActivityLog.timestamp >= thirty_days_ago
+    ).all()
 
+    return render_template("log_partial_payment.html", recent_payments=recent_payments)
+
+
+
+@app.route("/revert_partial_payment", methods=["POST"])
+def revert_partial_payment():
+    activity_id = request.form.get("activity_id")
+    activity = ActivityLog.query.get(activity_id)
+    if not activity or "Partial payment" not in activity.details:
+        flash("Invalid activity for reversal.", "error")
+        return redirect(url_for("log_partial_payment"))
+
+    # Extract details from the activity log
+    details_parts = activity.details.split("$")
+    payment_amount = float(details_parts[1].split(" ")[0])
+    contract_number = details_parts[1].split("logged for contract")[1].strip()
+
+    # Fetch the contract and reverse the payment
+    contract = Contract.query.filter_by(contract_number=contract_number).first()
+    if not contract:
+        flash("Contract not found.", "error")
+        return redirect(url_for("log_partial_payment"))
+
+    contract.amount_due += payment_amount
+    log_activity(
+        session.get("employee", "Unknown"),
+        "Reverted Payment",
+        f"Reversed partial payment of ${payment_amount:.2f} for contract {contract_number}.",
+        company_id=contract.company_id
+    )
+    db.session.commit()
+    flash(f"Partial payment of ${payment_amount:.2f} reverted for contract {contract_number}.", "success")
+
+    return redirect(url_for("log_partial_payment"))
 
 
 

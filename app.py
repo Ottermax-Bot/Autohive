@@ -626,11 +626,19 @@ def log_activity_route():
         flash("Invalid activity submission.", "error")
         return redirect(url_for("dashboard"))
 
+    # Fetch the company name for meaningful details
+    company = Company.query.get(company_id)
+    company_name = company.name if company else "Unknown Company"
+
+    # Generate fallback details if none are provided
+    if not details:
+        details = f"{action} performed for {company_name}"
+
     # Log the activity in the database
     log_activity(employee, action, details, company_id=company_id)
 
-    flash(f"Activity logged: {action} for company ID {company_id}.", "success")
-    return redirect(url_for("company_profile", company_id=company_id))  # Redirect back to the company profile
+    flash(f"Activity logged: {action} for company {company_name}.", "success")
+    return redirect(url_for("company_profile", company_id=company_id))
 
 
 

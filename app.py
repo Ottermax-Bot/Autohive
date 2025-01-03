@@ -640,15 +640,27 @@ def update_notes():
         return redirect(url_for("login"))
 
     company_id = request.form["company_id"]
-    notes = request.form["notes"]
+    new_note = request.form["notes"].strip()
 
-    # Update notes in the database
+    # Fetch the company and append the new note
     company = Company.query.get_or_404(company_id)
-    company.notes = notes
+    if company.notes:
+        company.notes += f"\n{new_note}"  # Append new note with a newline
+    else:
+        company.notes = new_note  # Add first note if none exist
+
     db.session.commit()
 
-    flash(f"Notes updated for {company.name}.", "success")
-    return redirect(url_for("company_profile", company_id=company_id))  # Redirect back to the company profile
+    # Log the note addition in the activity log
+    log_activity(
+        session.get("employee", "Unknown"),
+        "Added Note",
+        f"New note added: {new_note}",
+        company_id=company.id
+    )
+
+    flash(f"Note added to {company.name}.", "success")
+    return redirect(url_for("company_profile", company_id=company.id))
 
 
 

@@ -41,20 +41,25 @@
    </div>
 
    <!-- Notes Section -->
-   <div class="block profile-notes" id="notes-block" style="display: none;">
-       <h3>Add Notes</h3>
-       <form action="/update_notes" method="POST">
-           <input type="hidden" name="company_id" value="{{ company.id }}">
-           <textarea name="notes" placeholder="Add notes about this profile"></textarea>
-           <button type="submit" class="dashboard-btn">Save Note</button>
-       </form>
-       <h4>Existing Notes:</h4>
-       <ul>
-           {% for note in company.notes.split('\n') %}
-           <li>{{ note }}</li>
-           {% endfor %}
-       </ul>
-   </div>
+<div class="block profile-notes">
+    <h3>Notes</h3>
+    <ul>
+        {% if company.notes %}
+            {% for note in company.notes.split('\n') %}
+                <li>{{ note }}</li>
+            {% endfor %}
+        {% else %}
+            <p>No notes available for this company.</p>
+        {% endif %}
+    </ul>
+
+    <form action="/update_notes" method="POST">
+        <input type="hidden" name="company_id" value="{{ company.id }}">
+        <textarea name="notes" placeholder="Add a new note"></textarea>
+        <button type="submit" class="dashboard-btn">Add Note</button>
+    </form>
+</div>
+
 
    <!-- Contracts Section -->
    <div class="block contracts">
@@ -131,6 +136,23 @@
            {% endif %}
        </div>
    </div>
+   
+<div class="block activity-section">
+    <h3>Recent Activity</h3>
+    {% if recent_activity %}
+        <ul>
+            {% for log in recent_activity %}
+                <li>
+                    <strong>{{ log.timestamp.strftime('%Y-%m-%d %H:%M:%S') }}</strong> - 
+                    {{ log.employee }} performed <em>{{ log.action }}</em>
+                    {% if log.details %} ({{ log.details }}){% endif %}
+                </li>
+            {% endfor %}
+        </ul>
+    {% else %}
+        <p>No recent activity available for this company.</p>
+    {% endif %}
+</div>
 
    <!-- Edit Profile Section -->
    <div class="block edit-profile">

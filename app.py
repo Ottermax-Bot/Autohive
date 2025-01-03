@@ -304,8 +304,8 @@ def all_companies():
     if not is_logged_in():
         return redirect(url_for("login"))
 
-    # Query all companies
-    companies = Company.query.all()
+    # Query all companies sorted alphabetically by name
+    companies = Company.query.order_by(Company.name.asc()).all()
 
     # Prepare data for the template
     companies_data = [
@@ -334,6 +334,7 @@ def all_companies():
         companies=companies_data,
         page_title="All Companies"
     )
+
 
 
 

@@ -5,6 +5,76 @@
     <h2>Welcome, {{ employee }}!</h2>
     <p>Overview of activities and alerts:</p>
 
+<h3>Recent Activities</h3>
+    {% if recent_activities %}
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>Date/Time</th>
+                    <th>Employee</th>
+                    <th>Action</th>
+                    <th>Details</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for activity in recent_activities %}
+                <tr>
+                    <td>{{ activity.timestamp }}</td>
+                    <td>{{ activity.employee }}</td>
+                    <td>{{ activity.action }}</td>
+                    <td>{{ activity.details }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <a href="{{ url_for('activity') }}" class="dashboard-btn">View All Activities</a>
+    {% else %}
+    <p>No recent activities found.</p>
+    {% endif %}
+</div>
+
+
+<h3>Critical Alerts</h3>
+    <ul>
+        {% if overdue_contracts|length > 0 %}
+        <li>
+            <span class="badge badge-danger">{{ overdue_contracts|length }}</span> overdue contracts need attention.
+        </li>
+        {% endif %}
+        {% if inactive_customers|length > 0 %}
+        <li>
+            <span class="badge badge-warning">{{ inactive_customers|length }}</span> inactive customers need follow-up.
+        </li>
+        {% endif %}
+        {% if overdue_contracts|length == 0 and inactive_customers|length == 0 %}
+        <li><span class="badge badge-success">No critical alerts. Everything is up-to-date!</span></li>
+        {% endif %}
+    </ul>
+</div>
+
+
+<div class="dashboard-section">
+    <h3>Quick Actions</h3>
+    <div class="quick-actions-container">
+        <a href="{{ url_for('upload_ar') }}" class="quick-action-btn">
+            <i class="fa fa-upload"></i> Upload A/R Report
+        </a>
+    </div>
+</div>
+
+<div class="dashboard-section">
+    <h3>Key Metrics</h3>
+    <ul>
+        <li><strong>Total Contracts:</strong> {{ total_contracts }}</li>
+        <li><strong>Total Unpaid Balance:</strong> ${{ total_unpaid_balance | round(2) }}</li>
+        <li><strong>Total Paid Balance:</strong> ${{ total_paid_balance | round(2) }}</li>
+        <li><strong>Total Companies:</strong> {{ total_companies }}</li>
+    </ul>
+</div>
+
+    
     <!-- Overdue Contracts Section -->
     <div class="dashboard-section">
         <h3>Overdue Contracts (90+ Days)</h3>

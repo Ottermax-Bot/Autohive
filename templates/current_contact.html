@@ -1,0 +1,155 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="contact-container">
+    <h2>Current Contact</h2>
+    <p>List of customers who haven’t been contacted in the past 7 days and owe money:</p>
+
+    {% if current_contacts %}
+    <div class="contact-list">
+        {% for contact in current_contacts %}
+        <div class="contact-item">
+            <div class="contact-header">
+                <h3>{{ contact.name }}</h3>
+                <button class="toggle-details-btn" onclick="toggleDetails({{ contact.id }})">
+                    View Details
+                </button>
+            </div>
+            <div class="contact-details" id="details-{{ contact.id }}" style="display: none;">
+                <p><strong>Contact Person:</strong> {{ contact.contact_person }}</p>
+                <p><strong>Phone:</strong> {{ contact.phone }}</p>
+                <p><strong>Email:</strong> <a href="mailto:{{ contact.email }}">{{ contact.email }}</a></p>
+                <p><strong>Address:</strong> {{ contact.address }}</p>
+                <p><strong>Notes:</strong> {{ contact.notes }}</p>
+
+                <h4>Unpaid Contracts</h4>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Contract #</th>
+                            <th>Amount Due</th>
+                            <th>Date In</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for contract in contact.contracts %}
+                        <tr>
+                            <td>{{ contract.contract_number }}</td>
+                            <td>${{ contract.amount_due }}</td>
+                            <td>{{ contract.date_in }}</td>
+                            <td>
+                                <button class="mark-paid-btn"
+                                    onclick="markPaid({{ contract.id }}, {{ contact.id }})">
+                                    Mark as Paid
+                                </button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+
+                <h4>Log Contact</h4>
+                <form onsubmit="logContact(event, {{ contact.id }})">
+                    <textarea name="notes" placeholder="Add notes about the contact"></textarea>
+                    <button type="submit" class="contacted-btn">Log Contact</button>
+                </form>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <p>No customers require contact at this time.</p>
+    {% endif %}
+</div>
+
+<script>
+    function toggleDetails(contactId) {
+        const detailsDiv = document.getElementById(`details-${contactId}`);
+        detailsDiv.style.display = detailsDiv.style.display === "none" ? "block" : "none";
+    }
+
+    function markPaid(contractId, customerId) {
+        fetch("/current_contact", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/x-www-form-urlencoded",
+            },
+            body: new URLSearchParams({
+                contract_id: contractId,
+                customer_id: customerId,
+                action: "mark_paid",
+            }),
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === "success") {
+                    alert("Contract marked as paid!");
+                    location.reload();
+                } else {
+                    alert("Failed to mark as paid.");
+                }
+            })
+            .catch(error => console.error("Error:", error));
+    }
+
+    function logContact(event, customerId) {
+        event.preventDefault();
+        const form = event.target;
+        const notes = form.querySelector("textarea").value;
+
+        fetch("/current_contact", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/x-www-form-urlencoded",
+            },
+            body: new URLSearchParams({
+                customer_id: customerId,
+                action: "contacted",
+                notes: notes,
+            }),
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === "success") {
+                    alert("Contact logged successfully!");
+                    location.reload();
+                } else {
+                    alert("Failed to log contact.");
+                }
+            })
+            .catch(error => console.error("Error:", error));
+    }
+</script>
+
+<style>
+    .contact-container {
+        padding: 20px;
+    }
+    .contact-item {
+        border: 1px solid #ddd;
+        margin-bottom: 15px;
+        padding: 15px;
+        border-radius: 5px;
+    }
+    .contact-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    .toggle-details-btn, .mark-paid-btn, .contacted-btn {
+        background-color: #007bff;
+        color: white;
+        padding: 5px 10px;
+        border: none;
+        border-radius: 3px;
+        cursor: pointer;
+    }
+    .toggle-details-btn:hover, .mark-paid-btn:hover, .contacted-btn:hover {
+        background-color: #0056b3;
+    }
+    .contact-details {
+        margin-top: 15px;
+    }
+</style>
+{% endblock %}

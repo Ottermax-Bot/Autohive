@@ -1,4 +1,4 @@
-from flask import Flask, request, render_template, redirect, url_for, flash, session
+from flask import Flask, request, render_template, redirect, url_for, flash, session, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from datetime import datetime, timedelta
@@ -454,7 +454,76 @@ def update_company_details():
     return redirect(url_for("company_profile", company_id=company.id))
 
 
+@app.route("/current_contact", methods=["GET", "POST"])
+def current_contact():
+    if not is_logged_in():
+        return redirect(url_for("login"))
 
+    # Fetch customers who have unpaid contracts and no activity in the past 7 days
+    seven_days_ago = datetime.utcnow() - timedelta(days=7)
+    customers = (
+        Company.query.join(Contract)
+        .filter(
+            Contract.paid == False,
+            ~Company.activities.any(ActivityLog.timestamp >= seven_days_ago),
+        )
+        .distinct()
+        .all()
+    )
+
+    # Structure data for frontend
+    current_contacts = [
+        {
+            "id": customer.id,
+            "name": customer.name,
+            "contact_person": customer.contact_person or "Unknown Contact",
+            "phone": customer.phone_number or "N/A",
+            "email": customer.email or "N/A",
+            "address": customer.address or "N/A",
+            "notes": customer.notes or "No notes available",
+            "contracts": [
+                {
+                    "id": contract.id,
+                    "contract_number": contract.contract_number,
+                    "amount_due": contract.amount_due,
+                    "date_in": contract.date_in.strftime("%m/%d/%Y"),
+                }
+                for contract in customer.contracts if not contract.paid
+            ],
+        }
+        for customer in customers
+    ]
+
+    if request.method == "POST":
+        # Handle marking a contact as contacted and/or marking contracts as paid
+        customer_id = request.form.get("customer_id")
+        contract_id = request.form.get("contract_id", None)
+        action = request.form.get("action")
+        notes = request.form.get("notes", "")
+
+        customer = Company.query.get_or_404(customer_id)
+
+        if action == "mark_paid" and contract_id:
+            contract = Contract.query.get_or_404(contract_id)
+            contract.paid = True
+            db.session.commit()
+
+        if action == "contacted":
+            log_activity(
+                session.get("employee", "Unknown Employee"),
+                "Contacted",
+                f"Contacted {customer.name}. Notes: {notes}",
+                company_id=customer_id,
+            )
+
+        return jsonify({"status": "success"})
+
+    return render_template(
+        "current_contact.html",
+        current_contacts=current_contacts,
+        employee=session.get("employee"),
+        page_title="Current Contact",
+    )
 
 
 @app.route("/stats")

@@ -192,29 +192,37 @@ def dashboard():
     if not is_logged_in():
         return redirect(url_for("login"))
 
-    # Calculate overdue contracts (90+ days overdue)
-    overdue_threshold = datetime.now() - timedelta(days=90)
+    # Recent activities
+    recent_activities = ActivityLog.query.order_by(ActivityLog.timestamp.desc()).limit(10).all()
+
+    # Overdue contracts (90+ days)
     overdue_contracts = Contract.query.filter(
-        Contract.date_in <= overdue_threshold, Contract.paid == False
+        Contract.date_in <= datetime.now() - timedelta(days=90),
+        Contract.paid == False
     ).all()
 
-    # Calculate inactive customers (no activity in 30+ days)
-    contact_threshold = datetime.now() - timedelta(days=30)
-    inactive_customers = Company.query.filter(
-        ~Company.activities.any(ActivityLog.timestamp >= contact_threshold)
-    ).all()
+    # Inactive customers (no contact in 30+ days)
+    inactive_customers = Company.query.outerjoin(ActivityLog).filter(
+        (datetime.now() - ActivityLog.timestamp >= timedelta(days=30)) |
+        (ActivityLog.timestamp == None)  # Handles companies with no activity
+    ).distinct().all()
 
-    # Pass `now` to the template for date calculations
-    now = datetime.now()
+    # Key metrics
+    total_contracts = Contract.query.count()
+    total_unpaid_balance = db.session.query(db.func.sum(Contract.amount_due)).filter_by(paid=False).scalar() or 0
+    total_paid_balance = db.session.query(db.func.sum(Contract.amount_due)).filter_by(paid=True).scalar() or 0
+    total_companies = Company.query.count()
 
-    # Render the dashboard with all the required data
     return render_template(
         "dashboard.html",
         employee=session["employee"],
-        page_title="Dashboard",
+        recent_activities=recent_activities,
         overdue_contracts=overdue_contracts,
         inactive_customers=inactive_customers,
-        now=now,  # Pass current datetime to the template
+        total_contracts=total_contracts,
+        total_unpaid_balance=total_unpaid_balance,
+        total_paid_balance=total_paid_balance,
+        total_companies=total_companies
     )
 
 @app.route("/upload_ar", methods=["GET", "POST"])
@@ -260,8 +268,8 @@ def current_ar():
     if not is_logged_in():
         return redirect(url_for("login"))
 
-    # Query all companies and their contracts
-    companies = Company.query.all()
+    # Query all companies and their contracts, sorted alphabetically by company name
+    companies = Company.query.order_by(Company.name).all()
 
     # Calculate total outstanding balance
     total_balance = sum(

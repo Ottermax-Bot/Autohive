@@ -2,86 +2,90 @@
 
 {% block content %}
 <div class="dashboard-container">
-    <h2>Welcome, {{ employee }}!</h2>
-    <p>Overview of activities and alerts:</p>
+    <h2 class="dashboard-title">Welcome, {{ employee }}!</h2>
+    <p class="dashboard-subtitle">Overview of activities, metrics, and alerts:</p>
 
-<h3>Recent Activities</h3>
-    {% if recent_activities %}
-    <div class="table-container">
-        <table>
-            <thead>
-                <tr>
-                    <th>Date/Time</th>
-                    <th>Employee</th>
-                    <th>Action</th>
-                    <th>Details</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for activity in recent_activities %}
-                <tr>
-                    <td>{{ activity.timestamp }}</td>
-                    <td>{{ activity.employee }}</td>
-                    <td>{{ activity.action }}</td>
-                    <td>{{ activity.details }}</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+    <!-- Key Metrics Section -->
+    <div class="dashboard-section key-metrics">
+        <h3>Key Metrics</h3>
+        <div class="metrics-grid">
+            <div class="metric-card">
+                <h4>Total Contracts</h4>
+                <p>{{ total_contracts }}</p>
+            </div>
+            <div class="metric-card">
+                <h4>Total Unpaid Balance</h4>
+                <p>${{ total_unpaid_balance | round(2) }}</p>
+            </div>
+            <div class="metric-card">
+                <h4>Total Paid Balance</h4>
+                <p>${{ total_paid_balance | round(2) }}</p>
+            </div>
+            <div class="metric-card">
+                <h4>Total Companies</h4>
+                <p>{{ total_companies }}</p>
+            </div>
+        </div>
     </div>
-    <a href="{{ url_for('activity') }}" class="dashboard-btn">View All Activities</a>
-    {% else %}
-    <p>No recent activities found.</p>
-    {% endif %}
-</div>
 
-
-<h3>Critical Alerts</h3>
-    <ul>
-        {% if overdue_contracts|length > 0 %}
-        <li>
-            <span class="badge badge-danger">{{ overdue_contracts|length }}</span> overdue contracts need attention.
-        </li>
-        {% endif %}
-        {% if inactive_customers|length > 0 %}
-        <li>
-            <span class="badge badge-warning">{{ inactive_customers|length }}</span> inactive customers need follow-up.
-        </li>
-        {% endif %}
-        {% if overdue_contracts|length == 0 and inactive_customers|length == 0 %}
-        <li><span class="badge badge-success">No critical alerts. Everything is up-to-date!</span></li>
-        {% endif %}
-    </ul>
-</div>
-
-
-<div class="dashboard-section">
-    <h3>Quick Actions</h3>
-    <div class="quick-actions-container">
-        <a href="{{ url_for('upload_ar') }}" class="quick-action-btn">
-            <i class="fa fa-upload"></i> Upload A/R Report
-        </a>
+    <!-- Critical Alerts Section -->
+    <div class="dashboard-section critical-alerts">
+        <h3>Critical Alerts</h3>
+        <ul class="alerts-list">
+            {% if overdue_contracts|length > 0 %}
+            <li class="alert-item alert-danger">
+                <span>{{ overdue_contracts|length }}</span> overdue contracts need attention.
+            </li>
+            {% endif %}
+            {% if inactive_customers|length > 0 %}
+            <li class="alert-item alert-warning">
+                <span>{{ inactive_customers|length }}</span> inactive customers need follow-up.
+            </li>
+            {% endif %}
+            {% if overdue_contracts|length == 0 and inactive_customers|length == 0 %}
+            <li class="alert-item alert-success">No critical alerts. Everything is up-to-date!</li>
+            {% endif %}
+        </ul>
     </div>
-</div>
 
-<div class="dashboard-section">
-<h3>Key Metrics</h3>
-<ul>
-    <li><strong>Total Contracts:</strong> {{ total_contracts }}</li>
-    <li><strong>Total Unpaid Balance:</strong> ${{ total_unpaid_balance | round(2) }}</li>
-    <li><strong>Total Paid Balance:</strong> ${{ total_paid_balance | round(2) }}</li>
-    <li><strong>Total Companies:</strong> {{ total_companies }}</li>
-</ul>
+    <!-- Recent Activities Section -->
+    <div class="dashboard-section recent-activities">
+        <h3>Recent Activities</h3>
+        {% if recent_activities %}
+        <div class="table-container">
+            <table class="styled-table">
+                <thead>
+                    <tr>
+                        <th>Date/Time</th>
+                        <th>Employee</th>
+                        <th>Action</th>
+                        <th>Details</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for activity in recent_activities %}
+                    <tr>
+                        <td>{{ activity.timestamp }}</td>
+                        <td>{{ activity.employee }}</td>
+                        <td>{{ activity.action }}</td>
+                        <td>{{ activity.details }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <a href="{{ url_for('activity') }}" class="view-all-btn">View All Activities</a>
+        {% else %}
+        <p>No recent activities found.</p>
+        {% endif %}
+    </div>
 
-</div>
-
-    
     <!-- Overdue Contracts Section -->
-    <div class="dashboard-section">
+    <div class="dashboard-section overdue-contracts">
         <h3>Overdue Contracts (90+ Days)</h3>
         {% if overdue_contracts %}
         <div class="table-container">
-            <table>
+            <table class="styled-table">
                 <thead>
                     <tr>
                         <th>Contract #</th>
@@ -112,11 +116,11 @@
     </div>
 
     <!-- Inactive Customers Section -->
-    <div class="dashboard-section">
+    <div class="dashboard-section inactive-customers">
         <h3>Inactive Customers (No Contact in 30+ Days)</h3>
         {% if inactive_customers %}
         <div class="table-container">
-            <table>
+            <table class="styled-table">
                 <thead>
                     <tr>
                         <th>Company Name</th>
@@ -149,5 +153,97 @@
         <p>All customers are active.</p>
         {% endif %}
     </div>
+
+    <!-- Quick Actions Section -->
+    <div class="dashboard-section quick-actions">
+        <h3>Quick Actions</h3>
+        <div class="quick-actions-container">
+            <a href="{{ url_for('upload_ar') }}" class="quick-action-btn">
+                <i class="fa fa-upload"></i> Upload A/R Report
+            </a>
+            <a href="{{ url_for('activity') }}" class="quick-action-btn">
+                <i class="fa fa-list"></i> View Activity Log
+            </a>
+        </div>
+    </div>
 </div>
+
+<style>
+    .dashboard-container {
+        padding: 20px;
+    }
+    .dashboard-title {
+        font-size: 28px;
+        margin-bottom: 10px;
+    }
+    .dashboard-section {
+        margin-bottom: 30px;
+    }
+    .key-metrics .metrics-grid {
+        display: flex;
+        gap: 20px;
+    }
+    .metric-card {
+        flex: 1;
+        padding: 20px;
+        background-color: #f8f9fa;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        text-align: center;
+    }
+    .metric-card h4 {
+        margin-bottom: 10px;
+        font-size: 16px;
+    }
+    .metric-card p {
+        font-size: 20px;
+        font-weight: bold;
+    }
+    .alerts-list {
+        list-style: none;
+        padding: 0;
+    }
+    .alert-item {
+        margin-bottom: 10px;
+        padding: 10px;
+        border-radius: 5px;
+        font-weight: bold;
+    }
+    .alert-danger {
+        background-color: #f8d7da;
+        color: #721c24;
+    }
+    .alert-warning {
+        background-color: #fff3cd;
+        color: #856404;
+    }
+    .alert-success {
+        background-color: #d4edda;
+        color: #155724;
+    }
+    .styled-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+    .styled-table th, .styled-table td {
+        border: 1px solid #ddd;
+        padding: 8px;
+        text-align: left;
+    }
+    .styled-table th {
+        background-color: #f4f4f9;
+    }
+    .view-all-btn, .quick-action-btn {
+        display: inline-block;
+        margin-top: 10px;
+        padding: 10px 15px;
+        background-color: #007bff;
+        color: #fff;
+        text-decoration: none;
+        border-radius: 5px;
+    }
+    .view-all-btn:hover, .quick-action-btn:hover {
+        background-color: #0056b3;
+    }
+</style>
 {% endblock %}

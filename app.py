@@ -316,27 +316,26 @@ def all_companies():
     companies = Company.query.order_by(Company.name.asc()).all()
 
     # Prepare data for the template
-    companies_data = []
-    for company in companies:
-        total_paid = sum(contract.amount_due for contract in company.contracts if contract.paid)
-        total_unpaid = sum(contract.amount_due for contract in company.contracts if not contract.paid)
-        total_contracts = len(company.contracts)
-        total_paid_contracts = sum(1 for contract in company.contracts if contract.paid)
-        total_unpaid_contracts = sum(1 for contract in company.contracts if not contract.paid)
-        last_contact = (
-            company.activities[-1].timestamp.strftime("%Y-%m-%d %H:%M:%S")
-            if company.activities else "No Contact Logged"
-        )
-        companies_data.append({
+    companies_data = [
+        {
             "id": company.id,
             "name": company.name,
-            "total_contracts": total_contracts,
-            "total_paid_contracts": total_paid_contracts,
-            "total_unpaid_contracts": total_unpaid_contracts,
-            "total_paid": total_paid,
-            "total_unpaid": total_unpaid,
-            "last_contact": last_contact
-        })
+            "unpaid_contracts": sum(1 for contract in company.contracts if not contract.paid),
+            "total_unpaid": sum(
+                contract.amount_due for contract in company.contracts if not contract.paid
+            ),
+            "last_contact_date": (
+                max(activity.timestamp for activity in company.activities)
+                if company.activities else "No Activity"
+            ),
+            "overdue_contracts": sum(
+                1
+                for contract in company.contracts
+                if not contract.paid and (datetime.utcnow().date() - contract.date_in).days > 30
+            )
+        }
+        for company in companies
+    ]
 
     # Search/filter functionality
     query = request.args.get("query", "").lower()
@@ -352,6 +351,7 @@ def all_companies():
         companies=companies_data,
         page_title="All Companies"
     )
+
 
 
 

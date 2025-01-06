@@ -653,7 +653,7 @@ def process_excel(filepath):
                     phone_number="N/A",
                     email="N/A",
                     address="N/A",
-                    notes="No additional notes provided."
+                    notes="No additional notes provided.",
                 )
                 db.session.add(company)
                 db.session.commit()  # Commit to assign an ID to the new company
@@ -666,14 +666,18 @@ def process_excel(filepath):
             contract_number = row["Contract #"]
             if contract_number:
                 processed_contracts[company.id].add(contract_number)
-                contract = Contract.query.filter_by(contract_number=contract_number, company_id=company.id).first()
+                contract = Contract.query.filter_by(
+                    contract_number=contract_number, company_id=company.id
+                ).first()
                 if not contract:
                     contract = Contract(
                         company_id=company.id,
                         contract_number=contract_number,
                         amount_due=float(row["A/R Amt"]) if row["A/R Amt"] else 0.0,
-                        date_in=datetime.strptime(row["Date In"], "%m/%d/%Y") if row["Date In"] else datetime.now(),
-                        paid=row["Paid"] == "Yes"
+                        date_in=datetime.strptime(row["Date In"], "%m/%d/%Y")
+                        if row["Date In"]
+                        else datetime.now(),
+                        paid=row["Paid"] == "Yes",
                     )
                     db.session.add(contract)
                 else:
@@ -682,21 +686,37 @@ def process_excel(filepath):
                     contract.paid = row["Paid"] == "Yes"
                     contract.date_in = datetime.strptime(row["Date In"], "%m/%d/%Y") if row["Date In"] else datetime.now()
 
-    # Mark contracts as paid if they are missing from the uploaded file
-    for company_id, uploaded_contracts in processed_contracts.items():
-        existing_contracts = Contract.query.filter_by(company_id=company_id).all()
-        for contract in existing_contracts:
-            if contract.contract_number not in uploaded_contracts and not contract.paid:
+    # Handle contracts for companies missing in the uploaded file
+    all_company_ids = {company.id for company in Company.query.all()}
+    for company_id in all_company_ids:
+        # If a company is missing entirely from the upload
+        if company_id not in processed_contracts:
+            contracts_to_mark_paid = Contract.query.filter_by(company_id=company_id, paid=False).all()
+            for contract in contracts_to_mark_paid:
                 contract.paid = True  # Mark as paid
                 log_activity(
                     employee="System",
                     action="Marked as Paid",
                     details=f"Contract {contract.contract_number} automatically marked as paid during upload.",
-                    company_id=company_id
+                    company_id=company_id,
                 )
+        else:
+            # For companies in the upload, check for missing contracts
+            uploaded_contracts = processed_contracts[company_id]
+            existing_contracts = Contract.query.filter_by(company_id=company_id).all()
+            for contract in existing_contracts:
+                if contract.contract_number not in uploaded_contracts and not contract.paid:
+                    contract.paid = True  # Mark as paid
+                    log_activity(
+                        employee="System",
+                        action="Marked as Paid",
+                        details=f"Contract {contract.contract_number} automatically marked as paid during upload.",
+                        company_id=company_id,
+                    )
 
     # Commit all changes at once
     db.session.commit()
+
 
 
 @app.route("/log_activity", methods=["POST"])

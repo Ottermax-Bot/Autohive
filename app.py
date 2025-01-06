@@ -675,6 +675,12 @@ def process_excel(filepath):
 
     for _, row in df.iterrows():
         company_name = row["Company Name"]
+
+        # Handle "Self Pay" entries
+        if company_name == "SELF-PAY":
+            individual_name = row["Contract #"]  # Assume individual name is stored in "Contract #" column
+            company_name = f"SELF-PAY - {individual_name}"  # Treat each individual as a separate entity
+
         if company_name:
             # Check if the company already exists in the database
             company = Company.query.filter_by(name=company_name).first()

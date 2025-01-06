@@ -316,24 +316,34 @@ def all_companies():
     companies = Company.query.order_by(Company.name.asc()).all()
 
     # Prepare data for the template
-    companies_data = [
-        {
+    companies_data = []
+    for company in companies:
+        total_paid = sum(contract.amount_due for contract in company.contracts if contract.paid)
+        total_unpaid = sum(contract.amount_due for contract in company.contracts if not contract.paid)
+        total_contracts = len(company.contracts)
+        total_paid_contracts = sum(1 for contract in company.contracts if contract.paid)
+        total_unpaid_contracts = sum(1 for contract in company.contracts if not contract.paid)
+        last_contact = (
+            company.activities[-1].timestamp.strftime("%Y-%m-%d %H:%M:%S")
+            if company.activities else "No Contact Logged"
+        )
+        companies_data.append({
             "id": company.id,
             "name": company.name,
-            "contracts_count": len(company.contracts),
-            "outstanding_balance": sum(
-                contract.amount_due for contract in company.contracts if not contract.paid
-            )
-        }
-        for company in companies
-    ]
+            "total_contracts": total_contracts,
+            "total_paid_contracts": total_paid_contracts,
+            "total_unpaid_contracts": total_unpaid_contracts,
+            "total_paid": total_paid,
+            "total_unpaid": total_unpaid,
+            "last_contact": last_contact
+        })
 
     # Search/filter functionality
     query = request.args.get("query", "").lower()
     if query:
         companies_data = [
             company for company in companies_data
-            if query in company["name"].lower() or query in str(company["outstanding_balance"])
+            if query in company["name"].lower() or query in str(company["total_unpaid"])
         ]
 
     return render_template(

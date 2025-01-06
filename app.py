@@ -670,16 +670,15 @@ def process_excel(filepath):
     # Fill missing cells with empty strings to avoid issues
     df.fillna("", inplace=True)
 
-    # Dictionary to store contracts from the uploaded file
+    # Dictionary to track processed companies and contracts
     processed_contracts = {}
 
     for _, row in df.iterrows():
         company_name = row["Company Name"]
 
-        # Handle "Self Pay" entries
-        if company_name == "SELF-PAY":
-            individual_name = row["Contract #"]  # Assume individual name is stored in "Contract #" column
-            company_name = f"SELF-PAY - {individual_name}"  # Treat each individual as a separate entity
+        # Handle "Self-Pay" explicitly
+        if company_name.strip().upper() == "SELF-PAY":
+            company_name = "SELF-PAY"  # Normalize the name
 
         if company_name:
             # Check if the company already exists in the database
@@ -755,6 +754,7 @@ def process_excel(filepath):
 
     # Commit all changes at once
     db.session.commit()
+
 
 
 

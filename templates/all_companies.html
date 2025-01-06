@@ -1,95 +1,96 @@
 {% extends "base.html" %}
 
 {% block content %}
-<h2>Company Profile</h2>
+<h2>All Companies</h2>
 
-<div class="main-container">
-
-    <!-- Uncontacted / Unpaid Section -->
-    <div class="section">
-        <h3>Uncontacted / Unpaid</h3>
-        {% if uncontacted_unpaid %}
-        <ul>
-            {% for company in uncontacted_unpaid %}
-            <li>
-                <a href="{{ url_for('company_profile', company_id=company.id) }}">{{ company.name }}</a>
-                ({{ company.contracts|length }} unpaid contracts)
-            </li>
-            {% endfor %}
-        </ul>
-        {% else %}
-        <p>No uncontacted/unpaid companies found.</p>
-        {% endif %}
-    </div>
-
-    <!-- Contacted in the Past 7 Days / Unpaid Section -->
-    <div class="section">
-        <h3>Contacted in the Past 7 Days / Unpaid</h3>
-        {% if contacted_unpaid %}
-        <ul>
-            {% for company in contacted_unpaid %}
-            <li>
-                <a href="{{ url_for('company_profile', company_id=company.id) }}">{{ company.name }}</a>
-                ({{ company.contracts|length }} unpaid contracts)
-            </li>
-            {% endfor %}
-        </ul>
-        {% else %}
-        <p>No recently contacted/unpaid companies found.</p>
-        {% endif %}
-    </div>
-
-    <!-- Paid / No Contracts Owed Section -->
-    <div class="section">
-        <h3>Paid / No Contracts Owed</h3>
-        {% if paid_no_contracts %}
-        <ul>
-            {% for company in paid_no_contracts %}
-            <li>
-                <a href="{{ url_for('company_profile', company_id=company.id) }}">{{ company.name }}</a>
-            </li>
-            {% endfor %}
-        </ul>
-        {% else %}
-        <p>All companies owe money or are uncontacted.</p>
-        {% endif %}
-    </div>
-
+<!-- Search Bar -->
+<div class="search-container">
+    <form action="/all_companies" method="GET">
+        <input type="text" name="query" placeholder="Search by Company Name or Balance" value="{{ request.args.get('query', '') }}">
+        <button type="submit" class="dashboard-btn">Search</button>
+    </form>
 </div>
 
-<style>
-    .main-container {
-        display: flex;
-        flex-direction: column;
-        gap: 20px;
-    }
+<!-- Uncontacted/Unpaid Companies -->
+<h3>Uncontacted/Unpaid</h3>
+<div class="table-container">
+    <table>
+        <thead>
+            <tr>
+                <th>Company Name</th>
+                <th># of Unpaid Contracts</th>
+                <th>Total Unpaid $</th>
+                <th># of Overdue Contracts (30+ Days)</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for company in uncontacted_unpaid %}
+            <tr>
+                <td>{{ company.name }}</td>
+                <td>{{ company.unpaid_contracts }}</td>
+                <td>${{ "%.2f"|format(company.total_unpaid) }}</td>
+                <td>{{ company.overdue_contracts }}</td>
+                <td>
+                    <a href="/company_profile/{{ company.id }}" class="view-profile-btn">View Profile</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
 
-    .section {
-        padding: 15px;
-        border: 1px solid #ddd;
-        border-radius: 5px;
-    }
+<!-- Contacted in the Past 7 Days/Unpaid -->
+<h3>Contacted in the Past 7 Days/Unpaid</h3>
+<div class="table-container">
+    <table>
+        <thead>
+            <tr>
+                <th>Company Name</th>
+                <th># of Unpaid Contracts</th>
+                <th>Total Unpaid $</th>
+                <th># of Overdue Contracts (30+ Days)</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for company in contacted_unpaid %}
+            <tr>
+                <td>{{ company.name }}</td>
+                <td>{{ company.unpaid_contracts }}</td>
+                <td>${{ "%.2f"|format(company.total_unpaid) }}</td>
+                <td>{{ company.overdue_contracts }}</td>
+                <td>
+                    <a href="/company_profile/{{ company.id }}" class="view-profile-btn">View Profile</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
 
-    h3 {
-        margin-bottom: 10px;
-    }
-
-    ul {
-        list-style-type: none;
-        padding: 0;
-    }
-
-    ul li {
-        margin: 5px 0;
-    }
-
-    ul li a {
-        text-decoration: none;
-        color: #007BFF;
-    }
-
-    ul li a:hover {
-        text-decoration: underline;
-    }
-</style>
+<!-- Paid/No Contracts Owed -->
+<h3>Paid/No Contracts Owed</h3>
+<div class="table-container">
+    <table>
+        <thead>
+            <tr>
+                <th>Company Name</th>
+                <th>Last Contact Date</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for company in paid_companies %}
+            <tr>
+                <td>{{ company.name }}</td>
+                <td>{{ company.last_contact_date }}</td>
+                <td>
+                    <a href="/company_profile/{{ company.id }}" class="view-profile-btn">View Profile</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
 {% endblock %}

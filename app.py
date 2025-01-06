@@ -332,17 +332,18 @@ def all_companies():
             .order_by(ActivityLog.timestamp.desc())
             .first()
         )
-        last_contact_date = last_activity[0].strftime("%Y-%m-%d") if last_activity else None
+        last_contact_date = last_activity[0].strftime("%Y-%m-%d") if last_activity else "No activity logged"
 
         # Categorize companies
         if unpaid_contracts:
-            if last_contact_date and (datetime.utcnow().date() - datetime.strptime(last_contact_date, "%Y-%m-%d").date()).days <= 7:
+            if last_activity and (datetime.utcnow().date() - datetime.strptime(last_contact_date, "%Y-%m-%d").date()).days <= 7:
                 contacted_unpaid.append({
                     "id": company.id,
                     "name": company.name,
                     "unpaid_contracts": len(unpaid_contracts),
                     "total_unpaid": total_unpaid,
                     "overdue_contracts": len(overdue_contracts),
+                    "last_contact_date": last_contact_date,
                 })
             else:
                 uncontacted_unpaid.append({
@@ -351,12 +352,13 @@ def all_companies():
                     "unpaid_contracts": len(unpaid_contracts),
                     "total_unpaid": total_unpaid,
                     "overdue_contracts": len(overdue_contracts),
+                    "last_contact_date": last_contact_date,
                 })
         else:
             paid_companies.append({
                 "id": company.id,
                 "name": company.name,
-                "last_contact_date": last_contact_date or "No activity logged",
+                "last_contact_date": last_contact_date,
             })
 
     # Search/filter functionality
@@ -383,6 +385,7 @@ def all_companies():
         paid_companies=paid_companies,
         page_title="All Companies"
     )
+
 
 
 

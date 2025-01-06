@@ -21,6 +21,7 @@
                 <th># of Unpaid Contracts</th>
                 <th>Total Unpaid $</th>
                 <th># of Overdue Contracts (30+ Days)</th>
+                <th>Last Contact Date</th>
                 <th>Actions</th>
             </tr>
         </thead>
@@ -31,6 +32,7 @@
                 <td>{{ company.unpaid_contracts }}</td>
                 <td>${{ "%.2f"|format(company.total_unpaid) }}</td>
                 <td>{{ company.overdue_contracts }}</td>
+                <td>{{ company.last_contact_date }}</td>
                 <td>
                     <a href="/company_profile/{{ company.id }}" class="view-profile-btn">View Profile</a>
                 </td>
@@ -50,6 +52,7 @@
                 <th># of Unpaid Contracts</th>
                 <th>Total Unpaid $</th>
                 <th># of Overdue Contracts (30+ Days)</th>
+                <th>Last Contact Date</th>
                 <th>Actions</th>
             </tr>
         </thead>
@@ -60,6 +63,7 @@
                 <td>{{ company.unpaid_contracts }}</td>
                 <td>${{ "%.2f"|format(company.total_unpaid) }}</td>
                 <td>{{ company.overdue_contracts }}</td>
+                <td>{{ company.last_contact_date }}</td>
                 <td>
                     <a href="/company_profile/{{ company.id }}" class="view-profile-btn">View Profile</a>
                 </td>

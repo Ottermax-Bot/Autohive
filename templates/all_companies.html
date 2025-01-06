@@ -16,8 +16,12 @@
         <thead>
             <tr>
                 <th>Company Name</th>
-                <th># of Contracts</th>
-                <th>Outstanding Balance</th>
+                <th>Total Contracts</th>
+                <th>Paid Contracts</th>
+                <th>Unpaid Contracts</th>
+                <th>Total Paid ($)</th>
+                <th>Total Unpaid ($)</th>
+                <th>Last Contact Date</th>
                 <th>Actions</th>
             </tr>
         </thead>
@@ -25,8 +29,12 @@
             {% for company in companies %}
             <tr>
                 <td>{{ company.name }}</td>
-                <td>{{ company.contracts_count }}</td>
-                <td>${{ "%.2f"|format(company.outstanding_balance) }}</td>
+                <td>{{ company.total_contracts }}</td>
+                <td>{{ company.total_paid_contracts }}</td>
+                <td>{{ company.total_unpaid_contracts }}</td>
+                <td>${{ "%.2f"|format(company.total_paid) }}</td>
+                <td>${{ "%.2f"|format(company.total_unpaid) }}</td>
+                <td>{{ company.last_contact }}</td>
                 <td>
                   <a href="/company_profile/{{ company.id }}" class="view-profile-btn">View Profile</a>
                 </td>

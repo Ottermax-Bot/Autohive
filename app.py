@@ -672,59 +672,65 @@ def process_excel(filepath):
 
     # Dictionary to track processed companies and contracts
     processed_contracts = {}
+
+    # Create or fetch the "Self-Pay" company profile
+    self_pay_company = Company.query.filter_by(name="Self-Pay").first()
+    if not self_pay_company:
+        self_pay_company = Company(
+            name="Self-Pay",
+            contact_person="N/A",
+            phone_number="N/A",
+            email="N/A",
+            address="N/A",
+            notes="Consolidated profile for Self-Pay individuals.",
+        )
+        db.session.add(self_pay_company)
+        db.session.commit()
+
     in_self_pay_section = False  # Flag to detect "Self-Pay" section
 
     for _, row in df.iterrows():
         company_name = row["Company Name"]
 
-        # Detect start of "Self-Pay" section
-        if row["Contract #"] == "SELF-PAY":
-            in_self_pay_section = not in_self_pay_section  # Toggle the flag
+        # Detect "Self-Pay" section start and end
+        if row["Contract #"].strip().upper() == "SELF-PAY":
+            in_self_pay_section = not in_self_pay_section  # Toggle flag
             continue  # Skip this row
 
         if in_self_pay_section:
-            # Process individuals in "Self-Pay" section
-            individual_name = row["Contract #"]  # Column B contains the individual's name
-            if not individual_name:
-                continue  # Skip rows without individual names
-
-            # Check if the individual already exists as a "Company"
-            company = Company.query.filter_by(name=individual_name).first()
-            if not company:
-                company = Company(
-                    name=individual_name,
-                    contact_person="Individual",
-                    phone_number="N/A",
-                    email="N/A",
-                    address="N/A",
-                    notes="Self-pay individual.",
-                )
-                db.session.add(company)
-                db.session.commit()
-
-            # Add or update contracts for the individual
+            # Process "Self-Pay" contracts under the "Self-Pay" company profile
             contract_number = row["Contract #"]
-            if contract_number not in processed_contracts.get(company.id, set()):
-                processed_contracts.setdefault(company.id, set()).add(contract_number)
+            if not contract_number:
+                continue  # Skip invalid rows
+
+            if contract_number not in processed_contracts.get(self_pay_company.id, set()):
+                processed_contracts.setdefault(self_pay_company.id, set()).add(contract_number)
                 contract = Contract.query.filter_by(
-                    contract_number=contract_number, company_id=company.id
+                    contract_number=contract_number, company_id=self_pay_company.id
                 ).first()
                 if not contract:
-                    contract = Contract(
-                        company_id=company.id,
-                        contract_number=contract_number,
-                        amount_due=float(row["A/R Amt"]) if row["A/R Amt"] else 0.0,
-                        date_in=datetime.strptime(row["Date In"], "%m/%d/%Y")
-                        if row["Date In"]
-                        else datetime.now(),
-                        paid=row["Paid"] == "Yes",
-                    )
-                    db.session.add(contract)
+                    # Create a new contract
+                    try:
+                        contract = Contract(
+                            company_id=self_pay_company.id,
+                            contract_number=contract_number,
+                            amount_due=float(row["A/R Amt"]) if row["A/R Amt"] else 0.0,
+                            date_in=datetime.strptime(row["Date In"], "%m/%d/%Y")
+                            if row["Date In"]
+                            else datetime.now(),
+                            paid=row["Paid"] == "Yes",
+                        )
+                        db.session.add(contract)
+                    except Exception as e:
+                        app.logger.error(f"Error adding contract: {e}")
                 else:
-                    contract.amount_due = float(row["A/R Amt"]) if row["A/R Amt"] else 0.0
-                    contract.paid = row["Paid"] == "Yes"
-                    contract.date_in = datetime.strptime(row["Date In"], "%m/%d/%Y") if row["Date In"] else datetime.now()
-
+                    # Update contract details if it already exists
+                    try:
+                        contract.amount_due = float(row["A/R Amt"]) if row["A/R Amt"] else 0.0
+                        contract.paid = row["Paid"] == "Yes"
+                        contract.date_in = datetime.strptime(row["Date In"], "%m/%d/%Y") if row["Date In"] else datetime.now()
+                    except Exception as e:
+                        app.logger.error(f"Error updating contract: {e}")
         else:
             # Process regular companies
             if not company_name:
@@ -769,9 +775,41 @@ def process_excel(filepath):
                     contract.paid = row["Paid"] == "Yes"
                     contract.date_in = datetime.strptime(row["Date In"], "%m/%d/%Y") if row["Date In"] else datetime.now()
 
+    # Handle contracts for companies missing in the uploaded file
+    all_company_ids = {company.id for company in Company.query.all()}
+    for company_id in all_company_ids:
+        # If a company is missing entirely from the upload
+        if company_id not in processed_contracts:
+            contracts_to_mark_paid = Contract.query.filter_by(company_id=company_id, paid=False).all()
+            for contract in contracts_to_mark_paid:
+                contract.paid = True  # Mark as paid
+                log_activity(
+                    employee="System",
+                    action="Marked as Paid",
+                    details=f"Contract {contract.contract_number} automatically marked as paid during upload.",
+                    company_id=company_id,
+                )
+        else:
+            # For companies in the upload, check for missing contracts
+            uploaded_contracts = processed_contracts[company_id]
+            existing_contracts = Contract.query.filter_by(company_id=company_id).all()
+            for contract in existing_contracts:
+                if contract.contract_number not in uploaded_contracts and not contract.paid:
+                    contract.paid = True  # Mark as paid
+                    log_activity(
+                        employee="System",
+                        action="Marked as Paid",
+                        details=f"Contract {contract.contract_number} automatically marked as paid during upload.",
+                        company_id=company_id,
+                    )
+
     # Commit all changes at once
-    db.session.commit()
-    app.logger.info("All contracts processed successfully.")
+    try:
+        db.session.commit()
+        app.logger.info("All contracts processed successfully.")
+    except Exception as e:
+        app.logger.error(f"Error during commit: {e}")
+
 
 
 

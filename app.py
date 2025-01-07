@@ -312,77 +312,44 @@ def all_companies():
     if not is_logged_in():
         return redirect(url_for("login"))
 
-    # Query all companies sorted alphabetically
+    # Query all companies sorted alphabetically by name
     companies = Company.query.order_by(Company.name.asc()).all()
 
-    # Prepare data for each category
-    uncontacted_unpaid = []
-    contacted_unpaid = []
-    paid_companies = []
-
+    # Prepare data for the template
+    companies_data = []
     for company in companies:
-        unpaid_contracts = [contract for contract in company.contracts if not contract.paid]
-        total_unpaid = sum(contract.amount_due for contract in unpaid_contracts)
-        overdue_contracts = [
-            contract for contract in unpaid_contracts if (datetime.utcnow().date() - contract.date_in).days > 30
-        ]
-        last_activity = (
-            db.session.query(ActivityLog.timestamp)
-            .filter_by(company_id=company.id)
-            .order_by(ActivityLog.timestamp.desc())
-            .first()
+        total_paid = sum(contract.amount_due for contract in company.contracts if contract.paid)
+        total_unpaid = sum(contract.amount_due for contract in company.contracts if not contract.paid)
+        total_contracts = len(company.contracts)
+        total_paid_contracts = sum(1 for contract in company.contracts if contract.paid)
+        total_unpaid_contracts = sum(1 for contract in company.contracts if not contract.paid)
+        last_contact = (
+            company.activities[-1].timestamp.strftime("%Y-%m-%d %H:%M:%S")
+            if company.activities else "No Contact Logged"
         )
-        last_contact_date = last_activity[0].strftime("%Y-%m-%d") if last_activity else "No activity logged"
-
-        # Categorize companies
-        if unpaid_contracts:
-            if last_activity and (datetime.utcnow().date() - datetime.strptime(last_contact_date, "%Y-%m-%d").date()).days <= 7:
-                contacted_unpaid.append({
-                    "id": company.id,
-                    "name": company.name,
-                    "unpaid_contracts": len(unpaid_contracts),
-                    "total_unpaid": total_unpaid,
-                    "overdue_contracts": len(overdue_contracts),
-                    "last_contact_date": last_contact_date,
-                })
-            else:
-                uncontacted_unpaid.append({
-                    "id": company.id,
-                    "name": company.name,
-                    "unpaid_contracts": len(unpaid_contracts),
-                    "total_unpaid": total_unpaid,
-                    "overdue_contracts": len(overdue_contracts),
-                    "last_contact_date": last_contact_date,
-                })
-        else:
-            paid_companies.append({
-                "id": company.id,
-                "name": company.name,
-                "last_contact_date": last_contact_date,
-            })
+        companies_data.append({
+            "id": company.id,
+            "name": company.name,
+            "total_contracts": total_contracts,
+            "total_paid_contracts": total_paid_contracts,
+            "total_unpaid_contracts": total_unpaid_contracts,
+            "total_paid": total_paid,
+            "total_unpaid": total_unpaid,
+            "last_contact": last_contact
+        })
 
     # Search/filter functionality
     query = request.args.get("query", "").lower()
     if query:
-        uncontacted_unpaid = [
-            company for company in uncontacted_unpaid
+        companies_data = [
+            company for company in companies_data
             if query in company["name"].lower() or query in str(company["total_unpaid"])
-        ]
-        contacted_unpaid = [
-            company for company in contacted_unpaid
-            if query in company["name"].lower() or query in str(company["total_unpaid"])
-        ]
-        paid_companies = [
-            company for company in paid_companies
-            if query in company["name"].lower()
         ]
 
     return render_template(
         "all_companies.html",
         employee=session["employee"],
-        uncontacted_unpaid=uncontacted_unpaid,
-        contacted_unpaid=contacted_unpaid,
-        paid_companies=paid_companies,
+        companies=companies_data,
         page_title="All Companies"
     )
 
@@ -657,6 +624,7 @@ def toggle_paid_status():
 
 
 
+
 def process_excel(filepath):
     df = pd.read_excel(filepath)
     required_columns = ["Company Name", "Contract #", "A/R Amt", "Date In", "Paid"]
@@ -729,9 +697,6 @@ def process_excel(filepath):
 
     # Commit all changes at once
     db.session.commit()
-
-
-
 
 
 @app.route("/log_activity", methods=["POST"])

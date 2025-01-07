@@ -684,62 +684,58 @@ def process_excel(filepath):
             in_self_pay_section = True
             company_name = "SELF-PAY"
 
-        # If in "Self-Pay" section, use column B as the individual's name
+        # If in "Self-Pay" section, use column B (individual name) as the company name
         if in_self_pay_section and not row["Company Name"]:
-            company_name = row["Contract #"]  # Use Contract Number as a temporary name
-            individual_name = row["Contract #"]
+            individual_name = row["Contract #"]  # Or column B
+            company_name = individual_name
 
-            # Handle "Self-Pay" entries
-            if company_name:
-                # Check if the company already exists in the database
-                company = Company.query.filter_by(name=company_name).first()
-                if not company:
-                    # Add new company with default values for missing fields
-                    company = Company(
-                        name=company_name,
-                        contact_person="Unknown Contact",
-                        phone_number="N/A",
-                        email="N/A",
-                        address="N/A",
-                        notes="No additional notes provided.",
-                    )
-                    db.session.add(company)
-                    db.session.commit()  # Commit to assign an ID to the new company
+        # Skip rows with missing essential data
+        if not company_name or not row["Contract #"]:
+            continue
 
-                # Track contracts for this company
-                if company.id not in processed_contracts:
-                    processed_contracts[company.id] = set()
+        # Check if the company already exists in the database
+        company = Company.query.filter_by(name=company_name).first()
+        if not company:
+            # Add new company with default values for missing fields
+            company = Company(
+                name=company_name,
+                contact_person="Unknown Contact",
+                phone_number="N/A",
+                email="N/A",
+                address="N/A",
+                notes="No additional notes provided.",
+            )
+            db.session.add(company)
+            db.session.commit()  # Commit to assign an ID to the new company
 
-                # Add or update contracts
-                contract_number = row["Contract #"]
-                if contract_number and contract_number not in processed_contracts[company.id]:
-                    processed_contracts[company.id].add(contract_number)
-                    contract = Contract.query.filter_by(
-                        contract_number=contract_number, company_id=company.id
-                    ).first()
-                    if not contract:
-                        # Create a new contract
-                        try:
-                            contract = Contract(
-                                company_id=company.id,
-                                contract_number=contract_number,
-                                amount_due=float(row["A/R Amt"]) if row["A/R Amt"] else 0.0,
-                                date_in=datetime.strptime(row["Date In"], "%m/%d/%Y")
-                                if row["Date In"]
-                                else datetime.now(),
-                                paid=row["Paid"] == "Yes",
-                            )
-                            db.session.add(contract)
-                        except Exception as e:
-                            app.logger.error(f"Error adding contract: {e}")
-                    else:
-                        # Update contract details if it already exists
-                        try:
-                            contract.amount_due = float(row["A/R Amt"]) if row["A/R Amt"] else 0.0
-                            contract.paid = row["Paid"] == "Yes"
-                            contract.date_in = datetime.strptime(row["Date In"], "%m/%d/%Y") if row["Date In"] else datetime.now()
-                        except Exception as e:
-                            app.logger.error(f"Error updating contract: {e}")
+        # Track contracts for this company
+        if company.id not in processed_contracts:
+            processed_contracts[company.id] = set()
+
+        # Add or update contracts
+        contract_number = row["Contract #"]
+        if contract_number and contract_number not in processed_contracts[company.id]:
+            processed_contracts[company.id].add(contract_number)
+            contract = Contract.query.filter_by(
+                contract_number=contract_number, company_id=company.id
+            ).first()
+            if not contract:
+                # Create a new contract
+                contract = Contract(
+                    company_id=company.id,
+                    contract_number=contract_number,
+                    amount_due=float(row["A/R Amt"]) if row["A/R Amt"] else 0.0,
+                    date_in=datetime.strptime(row["Date In"], "%m/%d/%Y")
+                    if row["Date In"]
+                    else datetime.now(),
+                    paid=row["Paid"] == "Yes",
+                )
+                db.session.add(contract)
+            else:
+                # Update contract details if it already exists
+                contract.amount_due = float(row["A/R Amt"]) if row["A/R Amt"] else 0.0
+                contract.paid = row["Paid"] == "Yes"
+                contract.date_in = datetime.strptime(row["Date In"], "%m/%d/%Y") if row["Date In"] else datetime.now()
 
     # Handle contracts for companies missing in the uploaded file
     all_company_ids = {company.id for company in Company.query.all()}
@@ -770,43 +766,7 @@ def process_excel(filepath):
                     )
 
     # Commit all changes at once
-    try:
-        db.session.commit()
-        app.logger.info("All contracts processed and committed successfully.")
-    except Exception as e:
-        app.logger.error(f"Error during commit: {e}")
-
-
-
-
-
-@app.route("/log_activity", methods=["POST"])
-def log_activity_route():
-    if not is_logged_in():
-        return redirect(url_for("login"))
-
-    company_id = request.form.get("company_id")
-    action = request.form.get("action")
-    details = request.form.get("details", "")  # Optional additional details
-    employee = session.get("employee", "Unknown Employee")
-
-    if not company_id or not action:
-        flash("Invalid activity submission.", "error")
-        return redirect(url_for("dashboard"))
-
-    # Fetch the company name for meaningful details
-    company = Company.query.get(company_id)
-    company_name = company.name if company else "Unknown Company"
-
-    # Generate fallback details if none are provided
-    if not details:
-        details = f"{action} performed for {company_name}"
-
-    # Log the activity in the database
-    log_activity(employee, action, details, company_id=company_id)
-
-    flash(f"Activity logged: {action} for company {company_name}.", "success")
-    return redirect(url_for("company_profile", company_id=company_id))
+    db.session.commit()
 
 
 

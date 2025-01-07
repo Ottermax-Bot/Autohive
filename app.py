@@ -849,7 +849,7 @@ def log_profile_activity():
 
     company_id = request.form.get("company_id")  # Use company_id instead of company_name
     action = request.form.get("action")
-    details = request.form.get("details", "")  # Optional additional details
+    details = request.form.get("details", f"Performed action: {action}")  # Set default details
     employee = session.get("employee", "Unknown Employee")
 
     if not company_id or not action:
@@ -878,6 +878,7 @@ def log_profile_activity():
     app.logger.info(f"Activity logged: {action} for {company.name} by {employee}")
     flash(f"Activity logged: {action} for {company.name}.", "success")
     return redirect(url_for("company_profile", company_id=company.id))
+
 
 
 

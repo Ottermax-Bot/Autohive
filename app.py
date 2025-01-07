@@ -835,7 +835,12 @@ def mark_contract_paid():
     flash(f"Contract {contract_number} marked as paid for {company_name}.", "success")
     return redirect(url_for("company_profile", company_name=company_name))
     
-    
+
+@app.route("/log_activity", methods=["POST"])
+def log_activity_alias():
+    return redirect(url_for("log_profile_activity"))
+
+
 @app.route("/log_profile_activity", methods=["POST"])
 def log_profile_activity():
     """

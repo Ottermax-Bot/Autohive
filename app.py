@@ -312,77 +312,44 @@ def all_companies():
     if not is_logged_in():
         return redirect(url_for("login"))
 
-    # Query all companies sorted alphabetically
+    # Query all companies sorted alphabetically by name
     companies = Company.query.order_by(Company.name.asc()).all()
 
-    # Prepare data for each category
-    uncontacted_unpaid = []
-    contacted_unpaid = []
-    paid_companies = []
-
+    # Prepare data for the template
+    companies_data = []
     for company in companies:
-        unpaid_contracts = [contract for contract in company.contracts if not contract.paid]
-        total_unpaid = sum(contract.amount_due for contract in unpaid_contracts)
-        overdue_contracts = [
-            contract for contract in unpaid_contracts if (datetime.utcnow().date() - contract.date_in).days > 30
-        ]
-        last_activity = (
-            db.session.query(ActivityLog.timestamp)
-            .filter_by(company_id=company.id)
-            .order_by(ActivityLog.timestamp.desc())
-            .first()
+        total_paid = sum(contract.amount_due for contract in company.contracts if contract.paid)
+        total_unpaid = sum(contract.amount_due for contract in company.contracts if not contract.paid)
+        total_contracts = len(company.contracts)
+        total_paid_contracts = sum(1 for contract in company.contracts if contract.paid)
+        total_unpaid_contracts = sum(1 for contract in company.contracts if not contract.paid)
+        last_contact = (
+            company.activities[-1].timestamp.strftime("%Y-%m-%d %H:%M:%S")
+            if company.activities else "No Contact Logged"
         )
-        last_contact_date = last_activity[0].strftime("%Y-%m-%d") if last_activity else "No activity logged"
-
-        # Categorize companies
-        if unpaid_contracts:
-            if last_activity and (datetime.utcnow().date() - datetime.strptime(last_contact_date, "%Y-%m-%d").date()).days <= 7:
-                contacted_unpaid.append({
-                    "id": company.id,
-                    "name": company.name,
-                    "unpaid_contracts": len(unpaid_contracts),
-                    "total_unpaid": total_unpaid,
-                    "overdue_contracts": len(overdue_contracts),
-                    "last_contact_date": last_contact_date,
-                })
-            else:
-                uncontacted_unpaid.append({
-                    "id": company.id,
-                    "name": company.name,
-                    "unpaid_contracts": len(unpaid_contracts),
-                    "total_unpaid": total_unpaid,
-                    "overdue_contracts": len(overdue_contracts),
-                    "last_contact_date": last_contact_date,
-                })
-        else:
-            paid_companies.append({
-                "id": company.id,
-                "name": company.name,
-                "last_contact_date": last_contact_date,
-            })
+        companies_data.append({
+            "id": company.id,
+            "name": company.name,
+            "total_contracts": total_contracts,
+            "total_paid_contracts": total_paid_contracts,
+            "total_unpaid_contracts": total_unpaid_contracts,
+            "total_paid": total_paid,
+            "total_unpaid": total_unpaid,
+            "last_contact": last_contact
+        })
 
     # Search/filter functionality
     query = request.args.get("query", "").lower()
     if query:
-        uncontacted_unpaid = [
-            company for company in uncontacted_unpaid
+        companies_data = [
+            company for company in companies_data
             if query in company["name"].lower() or query in str(company["total_unpaid"])
-        ]
-        contacted_unpaid = [
-            company for company in contacted_unpaid
-            if query in company["name"].lower() or query in str(company["total_unpaid"])
-        ]
-        paid_companies = [
-            company for company in paid_companies
-            if query in company["name"].lower()
         ]
 
     return render_template(
         "all_companies.html",
         employee=session["employee"],
-        uncontacted_unpaid=uncontacted_unpaid,
-        contacted_unpaid=contacted_unpaid,
-        paid_companies=paid_companies,
+        companies=companies_data,
         page_title="All Companies"
     )
 
@@ -670,146 +637,126 @@ def process_excel(filepath):
     # Fill missing cells with empty strings to avoid issues
     df.fillna("", inplace=True)
 
-    # Dictionary to track processed companies and contracts
+    # Dictionary to store contracts from the uploaded file
     processed_contracts = {}
-
-    # Create or fetch the "Self-Pay" company profile
-    self_pay_company = Company.query.filter_by(name="Self-Pay").first()
-    if not self_pay_company:
-        self_pay_company = Company(
-            name="Self-Pay",
-            contact_person="N/A",
-            phone_number="N/A",
-            email="N/A",
-            address="N/A",
-            notes="Consolidated profile for Self-Pay individuals.",
-        )
-        db.session.add(self_pay_company)
-        db.session.commit()
-
-    in_self_pay_section = False  # Flag to detect "Self-Pay" section
 
     for _, row in df.iterrows():
         company_name = row["Company Name"]
-
-        # Detect "Self-Pay" section start and end
-        if row["Contract #"].strip().upper() == "SELF-PAY":
-            in_self_pay_section = not in_self_pay_section  # Toggle flag
-            continue  # Skip this row
-
-        if in_self_pay_section:
-            # Process "Self-Pay" contracts under the "Self-Pay" company profile
-            contract_number = row["Contract #"]
-            if not contract_number:
-                continue  # Skip invalid rows
-
-            if contract_number not in processed_contracts.get(self_pay_company.id, set()):
-                processed_contracts.setdefault(self_pay_company.id, set()).add(contract_number)
-                contract = Contract.query.filter_by(
-                    contract_number=contract_number, company_id=self_pay_company.id
-                ).first()
-                if not contract:
-                    # Create a new contract
-                    try:
-                        contract = Contract(
-                            company_id=self_pay_company.id,
-                            contract_number=contract_number,
-                            amount_due=float(row["A/R Amt"]) if row["A/R Amt"] else 0.0,
-                            date_in=datetime.strptime(row["Date In"], "%m/%d/%Y")
-                            if row["Date In"]
-                            else datetime.now(),
-                            paid=row["Paid"] == "Yes",
-                        )
-                        db.session.add(contract)
-                    except Exception as e:
-                        app.logger.error(f"Error adding contract: {e}")
-                else:
-                    # Update contract details if it already exists
-                    try:
-                        contract.amount_due = float(row["A/R Amt"]) if row["A/R Amt"] else 0.0
-                        contract.paid = row["Paid"] == "Yes"
-                        contract.date_in = datetime.strptime(row["Date In"], "%m/%d/%Y") if row["Date In"] else datetime.now()
-                    except Exception as e:
-                        app.logger.error(f"Error updating contract: {e}")
-        else:
-            # Process regular companies
-            if not company_name:
-                continue  # Skip rows without company names
-
+        if company_name:
+            # Check if the company already exists in the database
             company = Company.query.filter_by(name=company_name).first()
             if not company:
+                # Add new company with default values for missing fields
                 company = Company(
                     name=company_name,
                     contact_person="Unknown Contact",
                     phone_number="N/A",
                     email="N/A",
                     address="N/A",
-                    notes="No additional notes provided.",
+                    notes="No additional notes provided."
                 )
                 db.session.add(company)
-                db.session.commit()
+                db.session.commit()  # Commit to assign an ID to the new company
 
-            # Track contracts for the company
+            # Track contracts for this company
             if company.id not in processed_contracts:
                 processed_contracts[company.id] = set()
 
+            # Add or update contracts
             contract_number = row["Contract #"]
-            if contract_number and contract_number not in processed_contracts[company.id]:
+            if contract_number:
                 processed_contracts[company.id].add(contract_number)
-                contract = Contract.query.filter_by(
-                    contract_number=contract_number, company_id=company.id
-                ).first()
+                contract = Contract.query.filter_by(contract_number=contract_number, company_id=company.id).first()
                 if not contract:
                     contract = Contract(
                         company_id=company.id,
                         contract_number=contract_number,
                         amount_due=float(row["A/R Amt"]) if row["A/R Amt"] else 0.0,
-                        date_in=datetime.strptime(row["Date In"], "%m/%d/%Y")
-                        if row["Date In"]
-                        else datetime.now(),
-                        paid=row["Paid"] == "Yes",
+                        date_in=datetime.strptime(row["Date In"], "%m/%d/%Y") if row["Date In"] else datetime.now(),
+                        paid=row["Paid"] == "Yes"
                     )
                     db.session.add(contract)
                 else:
+                    # Update contract details if it already exists
                     contract.amount_due = float(row["A/R Amt"]) if row["A/R Amt"] else 0.0
                     contract.paid = row["Paid"] == "Yes"
                     contract.date_in = datetime.strptime(row["Date In"], "%m/%d/%Y") if row["Date In"] else datetime.now()
 
-    # Handle contracts for companies missing in the uploaded file
-    all_company_ids = {company.id for company in Company.query.all()}
-    for company_id in all_company_ids:
-        # If a company is missing entirely from the upload
-        if company_id not in processed_contracts:
-            contracts_to_mark_paid = Contract.query.filter_by(company_id=company_id, paid=False).all()
-            for contract in contracts_to_mark_paid:
+    # Mark contracts as paid if they are missing from the uploaded file
+    for company_id, uploaded_contracts in processed_contracts.items():
+        existing_contracts = Contract.query.filter_by(company_id=company_id).all()
+        for contract in existing_contracts:
+            if contract.contract_number not in uploaded_contracts and not contract.paid:
                 contract.paid = True  # Mark as paid
                 log_activity(
                     employee="System",
                     action="Marked as Paid",
                     details=f"Contract {contract.contract_number} automatically marked as paid during upload.",
-                    company_id=company_id,
+                    company_id=company_id
                 )
-        else:
-            # For companies in the upload, check for missing contracts
-            uploaded_contracts = processed_contracts[company_id]
-            existing_contracts = Contract.query.filter_by(company_id=company_id).all()
-            for contract in existing_contracts:
-                if contract.contract_number not in uploaded_contracts and not contract.paid:
-                    contract.paid = True  # Mark as paid
-                    log_activity(
-                        employee="System",
-                        action="Marked as Paid",
-                        details=f"Contract {contract.contract_number} automatically marked as paid during upload.",
-                        company_id=company_id,
-                    )
 
     # Commit all changes at once
-    try:
-        db.session.commit()
-        app.logger.info("All contracts processed successfully.")
-    except Exception as e:
-        app.logger.error(f"Error during commit: {e}")
+    db.session.commit()
 
+
+@app.route("/log_activity", methods=["POST"])
+def log_activity_route():
+    if not is_logged_in():
+        return redirect(url_for("login"))
+
+    company_id = request.form.get("company_id")
+    action = request.form.get("action")
+    details = request.form.get("details", "")  # Optional additional details
+    employee = session.get("employee", "Unknown Employee")
+
+    if not company_id or not action:
+        flash("Invalid activity submission.", "error")
+        return redirect(url_for("dashboard"))
+
+    # Fetch the company name for meaningful details
+    company = Company.query.get(company_id)
+    company_name = company.name if company else "Unknown Company"
+
+    # Generate fallback details if none are provided
+    if not details:
+        details = f"{action} performed for {company_name}"
+
+    # Log the activity in the database
+    log_activity(employee, action, details, company_id=company_id)
+
+    flash(f"Activity logged: {action} for company {company_name}.", "success")
+    return redirect(url_for("company_profile", company_id=company_id))
+
+
+
+
+@app.route("/update_notes", methods=["POST"])
+def update_notes():
+    if not is_logged_in():
+        return redirect(url_for("login"))
+
+    company_id = request.form["company_id"]
+    new_note = request.form["notes"].strip()
+
+    # Fetch the company and append the new note
+    company = Company.query.get_or_404(company_id)
+    if company.notes:
+        company.notes += f"\n{new_note}"  # Append new note with a newline
+    else:
+        company.notes = new_note  # Add first note if none exist
+
+    db.session.commit()
+
+    # Log the note addition in the activity log
+    log_activity(
+        session.get("employee", "Unknown"),
+        "Added Note",
+        f"New note added: {new_note}",
+        company_id=company.id
+    )
+
+    flash(f"Note added to {company.name}.", "success")
+    return redirect(url_for("company_profile", company_id=company.id))
 
 
 
@@ -835,7 +782,7 @@ def mark_contract_paid():
     flash(f"Contract {contract_number} marked as paid for {company_name}.", "success")
     return redirect(url_for("company_profile", company_name=company_name))
     
-
+    
 @app.route("/log_profile_activity", methods=["POST"])
 def log_profile_activity():
     """
@@ -844,23 +791,18 @@ def log_profile_activity():
     if not is_logged_in():
         return redirect(url_for("login"))
 
-    # Log incoming request data
-    app.logger.info(f"Received form data: {request.form}")
-
     company_id = request.form.get("company_id")  # Use company_id instead of company_name
     action = request.form.get("action")
-    details = request.form.get("details", f"Performed action: {action}")  # Set default details
+    details = request.form.get("details", "")  # Optional additional details
     employee = session.get("employee", "Unknown Employee")
 
     if not company_id or not action:
-        app.logger.error("Missing company_id or action in form data")
         flash("Invalid activity submission.", "error")
         return redirect(url_for("dashboard"))
 
     # Check if the company exists in the database
     company = Company.query.get(company_id)
     if not company:
-        app.logger.error(f"Company with ID {company_id} not found.")
         flash(f"Company with ID {company_id} not found.", "error")
         return redirect(url_for("dashboard"))
 
@@ -875,10 +817,8 @@ def log_profile_activity():
     db.session.add(activity)
     db.session.commit()
 
-    app.logger.info(f"Activity logged: {action} for {company.name} by {employee}")
     flash(f"Activity logged: {action} for {company.name}.", "success")
     return redirect(url_for("company_profile", company_id=company.id))
-
 
 
 

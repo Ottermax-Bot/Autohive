@@ -672,132 +672,106 @@ def process_excel(filepath):
 
     # Dictionary to track processed companies and contracts
     processed_contracts = {}
-
-    # Initialize variables to handle the "Self-Pay" section
-    in_self_pay_section = False
+    in_self_pay_section = False  # Flag to detect "Self-Pay" section
 
     for _, row in df.iterrows():
         company_name = row["Company Name"]
 
-        # Detect "Self-Pay" block
-        if not company_name and row["Contract #"].startswith("ROME-") and row["A/R Amt"]:
-            in_self_pay_section = True
-            company_name = "SELF-PAY"
+        # Detect start of "Self-Pay" section
+        if row["Contract #"] == "SELF-PAY":
+            in_self_pay_section = not in_self_pay_section  # Toggle the flag
+            continue  # Skip this row
 
-        # If in "Self-Pay" section, use column B (individual name) as the company name
-        if in_self_pay_section and not row["Company Name"]:
-            individual_name = row["Contract #"]  # Or column B
-            company_name = individual_name
+        if in_self_pay_section:
+            # Process individuals in "Self-Pay" section
+            individual_name = row["Contract #"]  # Column B contains the individual's name
+            if not individual_name:
+                continue  # Skip rows without individual names
 
-        # Skip rows with missing essential data
-        if not company_name or not row["Contract #"]:
-            continue
-
-        # Check if the company already exists in the database
-        company = Company.query.filter_by(name=company_name).first()
-        if not company:
-            # Add new company with default values for missing fields
-            company = Company(
-                name=company_name,
-                contact_person="Unknown Contact",
-                phone_number="N/A",
-                email="N/A",
-                address="N/A",
-                notes="No additional notes provided.",
-            )
-            db.session.add(company)
-            db.session.commit()  # Commit to assign an ID to the new company
-
-        # Track contracts for this company
-        if company.id not in processed_contracts:
-            processed_contracts[company.id] = set()
-
-        # Add or update contracts
-        contract_number = row["Contract #"]
-        if contract_number and contract_number not in processed_contracts[company.id]:
-            processed_contracts[company.id].add(contract_number)
-            contract = Contract.query.filter_by(
-                contract_number=contract_number, company_id=company.id
-            ).first()
-            if not contract:
-                # Create a new contract
-                contract = Contract(
-                    company_id=company.id,
-                    contract_number=contract_number,
-                    amount_due=float(row["A/R Amt"]) if row["A/R Amt"] else 0.0,
-                    date_in=datetime.strptime(row["Date In"], "%m/%d/%Y")
-                    if row["Date In"]
-                    else datetime.now(),
-                    paid=row["Paid"] == "Yes",
+            # Check if the individual already exists as a "Company"
+            company = Company.query.filter_by(name=individual_name).first()
+            if not company:
+                company = Company(
+                    name=individual_name,
+                    contact_person="Individual",
+                    phone_number="N/A",
+                    email="N/A",
+                    address="N/A",
+                    notes="Self-pay individual.",
                 )
-                db.session.add(contract)
-            else:
-                # Update contract details if it already exists
-                contract.amount_due = float(row["A/R Amt"]) if row["A/R Amt"] else 0.0
-                contract.paid = row["Paid"] == "Yes"
-                contract.date_in = datetime.strptime(row["Date In"], "%m/%d/%Y") if row["Date In"] else datetime.now()
+                db.session.add(company)
+                db.session.commit()
 
-    # Handle contracts for companies missing in the uploaded file
-    all_company_ids = {company.id for company in Company.query.all()}
-    for company_id in all_company_ids:
-        # If a company is missing entirely from the upload
-        if company_id not in processed_contracts:
-            contracts_to_mark_paid = Contract.query.filter_by(company_id=company_id, paid=False).all()
-            for contract in contracts_to_mark_paid:
-                contract.paid = True  # Mark as paid
-                log_activity(
-                    employee="System",
-                    action="Marked as Paid",
-                    details=f"Contract {contract.contract_number} automatically marked as paid during upload.",
-                    company_id=company_id,
-                )
-        else:
-            # For companies in the upload, check for missing contracts
-            uploaded_contracts = processed_contracts[company_id]
-            existing_contracts = Contract.query.filter_by(company_id=company_id).all()
-            for contract in existing_contracts:
-                if contract.contract_number not in uploaded_contracts and not contract.paid:
-                    contract.paid = True  # Mark as paid
-                    log_activity(
-                        employee="System",
-                        action="Marked as Paid",
-                        details=f"Contract {contract.contract_number} automatically marked as paid during upload.",
-                        company_id=company_id,
+            # Add or update contracts for the individual
+            contract_number = row["Contract #"]
+            if contract_number not in processed_contracts.get(company.id, set()):
+                processed_contracts.setdefault(company.id, set()).add(contract_number)
+                contract = Contract.query.filter_by(
+                    contract_number=contract_number, company_id=company.id
+                ).first()
+                if not contract:
+                    contract = Contract(
+                        company_id=company.id,
+                        contract_number=contract_number,
+                        amount_due=float(row["A/R Amt"]) if row["A/R Amt"] else 0.0,
+                        date_in=datetime.strptime(row["Date In"], "%m/%d/%Y")
+                        if row["Date In"]
+                        else datetime.now(),
+                        paid=row["Paid"] == "Yes",
                     )
+                    db.session.add(contract)
+                else:
+                    contract.amount_due = float(row["A/R Amt"]) if row["A/R Amt"] else 0.0
+                    contract.paid = row["Paid"] == "Yes"
+                    contract.date_in = datetime.strptime(row["Date In"], "%m/%d/%Y") if row["Date In"] else datetime.now()
+
+        else:
+            # Process regular companies
+            if not company_name:
+                continue  # Skip rows without company names
+
+            company = Company.query.filter_by(name=company_name).first()
+            if not company:
+                company = Company(
+                    name=company_name,
+                    contact_person="Unknown Contact",
+                    phone_number="N/A",
+                    email="N/A",
+                    address="N/A",
+                    notes="No additional notes provided.",
+                )
+                db.session.add(company)
+                db.session.commit()
+
+            # Track contracts for the company
+            if company.id not in processed_contracts:
+                processed_contracts[company.id] = set()
+
+            contract_number = row["Contract #"]
+            if contract_number and contract_number not in processed_contracts[company.id]:
+                processed_contracts[company.id].add(contract_number)
+                contract = Contract.query.filter_by(
+                    contract_number=contract_number, company_id=company.id
+                ).first()
+                if not contract:
+                    contract = Contract(
+                        company_id=company.id,
+                        contract_number=contract_number,
+                        amount_due=float(row["A/R Amt"]) if row["A/R Amt"] else 0.0,
+                        date_in=datetime.strptime(row["Date In"], "%m/%d/%Y")
+                        if row["Date In"]
+                        else datetime.now(),
+                        paid=row["Paid"] == "Yes",
+                    )
+                    db.session.add(contract)
+                else:
+                    contract.amount_due = float(row["A/R Amt"]) if row["A/R Amt"] else 0.0
+                    contract.paid = row["Paid"] == "Yes"
+                    contract.date_in = datetime.strptime(row["Date In"], "%m/%d/%Y") if row["Date In"] else datetime.now()
 
     # Commit all changes at once
     db.session.commit()
-
-
-
-
-@app.route("/update_notes", methods=["POST"])
-def update_notes():
-    if not is_logged_in():
-        return redirect(url_for("login"))
-
-    company_id = request.form["company_id"]
-    new_note = request.form["notes"].strip()
-
-    # Fetch the company and append the new note
-    company = Company.query.get_or_404(company_id)
-    if company.notes:
-        company.notes += f"\n{new_note}"  # Append new note with a newline
-    else:
-        company.notes = new_note  # Add first note if none exist
-
-    db.session.commit()
-
-    # Log the note addition in the activity log
-    log_activity(
-        session.get("employee", "Unknown"),
-        "Added Note",
-        f"New note added: {new_note}",
-        company_id=company.id
-    )
-
-    flash(f"Note added to {company.name}.", "success")
-    return redirect(url_for("company_profile", company_id=company.id))
+    app.logger.info("All contracts processed successfully.")
 
 
 

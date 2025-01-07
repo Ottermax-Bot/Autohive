@@ -844,18 +844,23 @@ def log_profile_activity():
     if not is_logged_in():
         return redirect(url_for("login"))
 
+    # Log incoming request data
+    app.logger.info(f"Received form data: {request.form}")
+
     company_id = request.form.get("company_id")  # Use company_id instead of company_name
     action = request.form.get("action")
     details = request.form.get("details", "")  # Optional additional details
     employee = session.get("employee", "Unknown Employee")
 
     if not company_id or not action:
+        app.logger.error("Missing company_id or action in form data")
         flash("Invalid activity submission.", "error")
         return redirect(url_for("dashboard"))
 
     # Check if the company exists in the database
     company = Company.query.get(company_id)
     if not company:
+        app.logger.error(f"Company with ID {company_id} not found.")
         flash(f"Company with ID {company_id} not found.", "error")
         return redirect(url_for("dashboard"))
 
@@ -870,9 +875,9 @@ def log_profile_activity():
     db.session.add(activity)
     db.session.commit()
 
+    app.logger.info(f"Activity logged: {action} for {company.name} by {employee}")
     flash(f"Activity logged: {action} for {company.name}.", "success")
     return redirect(url_for("company_profile", company_id=company.id))
-
 
 
 

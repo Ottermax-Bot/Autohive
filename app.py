@@ -673,67 +673,73 @@ def process_excel(filepath):
     # Dictionary to track processed companies and contracts
     processed_contracts = {}
 
+    # Initialize variables to handle the "Self-Pay" section
+    in_self_pay_section = False
+
     for _, row in df.iterrows():
         company_name = row["Company Name"]
 
-        # Normalize "Self-Pay" and other company names
-        if company_name and "SELF-PAY" in company_name.strip().upper():
+        # Detect "Self-Pay" block
+        if not company_name and row["Contract #"].startswith("ROME-") and row["A/R Amt"]:
+            in_self_pay_section = True
             company_name = "SELF-PAY"
 
-        # Skip summary or invalid rows (e.g., missing "Contract #" or "Company Name")
-        contract_number = row["Contract #"]
-        if not contract_number or not company_name:
-            app.logger.warning(f"Skipping row due to missing data: {row.to_dict()}")
-            continue
+        # If in "Self-Pay" section, use column B as the individual's name
+        if in_self_pay_section and not row["Company Name"]:
+            company_name = row["Contract #"]  # Use Contract Number as a temporary name
+            individual_name = row["Contract #"]
 
-        # Check if the company already exists in the database
-        company = Company.query.filter_by(name=company_name).first()
-        if not company:
-            # Add new company with default values for missing fields
-            company = Company(
-                name=company_name,
-                contact_person="Unknown Contact",
-                phone_number="N/A",
-                email="N/A",
-                address="N/A",
-                notes="No additional notes provided.",
-            )
-            db.session.add(company)
-            db.session.commit()  # Commit to assign an ID to the new company
-
-        # Track contracts for this company
-        if company.id not in processed_contracts:
-            processed_contracts[company.id] = set()
-
-        # Add or update contracts
-        if contract_number not in processed_contracts[company.id]:
-            processed_contracts[company.id].add(contract_number)
-            contract = Contract.query.filter_by(
-                contract_number=contract_number, company_id=company.id
-            ).first()
-            if not contract:
-                # Create a new contract
-                try:
-                    contract = Contract(
-                        company_id=company.id,
-                        contract_number=contract_number,
-                        amount_due=float(row["A/R Amt"]) if row["A/R Amt"] else 0.0,
-                        date_in=datetime.strptime(row["Date In"], "%m/%d/%Y")
-                        if row["Date In"]
-                        else datetime.now(),
-                        paid=row["Paid"] == "Yes",
+            # Handle "Self-Pay" entries
+            if company_name:
+                # Check if the company already exists in the database
+                company = Company.query.filter_by(name=company_name).first()
+                if not company:
+                    # Add new company with default values for missing fields
+                    company = Company(
+                        name=company_name,
+                        contact_person="Unknown Contact",
+                        phone_number="N/A",
+                        email="N/A",
+                        address="N/A",
+                        notes="No additional notes provided.",
                     )
-                    db.session.add(contract)
-                except Exception as e:
-                    app.logger.error(f"Error adding contract: {e}")
-            else:
-                # Update contract details if it already exists
-                try:
-                    contract.amount_due = float(row["A/R Amt"]) if row["A/R Amt"] else 0.0
-                    contract.paid = row["Paid"] == "Yes"
-                    contract.date_in = datetime.strptime(row["Date In"], "%m/%d/%Y") if row["Date In"] else datetime.now()
-                except Exception as e:
-                    app.logger.error(f"Error updating contract: {e}")
+                    db.session.add(company)
+                    db.session.commit()  # Commit to assign an ID to the new company
+
+                # Track contracts for this company
+                if company.id not in processed_contracts:
+                    processed_contracts[company.id] = set()
+
+                # Add or update contracts
+                contract_number = row["Contract #"]
+                if contract_number and contract_number not in processed_contracts[company.id]:
+                    processed_contracts[company.id].add(contract_number)
+                    contract = Contract.query.filter_by(
+                        contract_number=contract_number, company_id=company.id
+                    ).first()
+                    if not contract:
+                        # Create a new contract
+                        try:
+                            contract = Contract(
+                                company_id=company.id,
+                                contract_number=contract_number,
+                                amount_due=float(row["A/R Amt"]) if row["A/R Amt"] else 0.0,
+                                date_in=datetime.strptime(row["Date In"], "%m/%d/%Y")
+                                if row["Date In"]
+                                else datetime.now(),
+                                paid=row["Paid"] == "Yes",
+                            )
+                            db.session.add(contract)
+                        except Exception as e:
+                            app.logger.error(f"Error adding contract: {e}")
+                    else:
+                        # Update contract details if it already exists
+                        try:
+                            contract.amount_due = float(row["A/R Amt"]) if row["A/R Amt"] else 0.0
+                            contract.paid = row["Paid"] == "Yes"
+                            contract.date_in = datetime.strptime(row["Date In"], "%m/%d/%Y") if row["Date In"] else datetime.now()
+                        except Exception as e:
+                            app.logger.error(f"Error updating contract: {e}")
 
     # Handle contracts for companies missing in the uploaded file
     all_company_ids = {company.id for company in Company.query.all()}
@@ -769,6 +775,7 @@ def process_excel(filepath):
         app.logger.info("All contracts processed and committed successfully.")
     except Exception as e:
         app.logger.error(f"Error during commit: {e}")
+
 
 
 

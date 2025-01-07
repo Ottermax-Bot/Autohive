@@ -44,12 +44,13 @@
                 <td>{{ log.timestamp }}</td>
                 <td>{{ log.employee }}</td>
                 <td>{{ log.action }}</td>
-                <td>{{ log.details }}</td>
+                <td>{{ log.details or "No details available" }}</td>
             </tr>
             {% endfor %}
         </tbody>
     </table>
 </div>
+
 
 <script>
     document.getElementById('employee-filter').addEventListener('change', filterLogs);

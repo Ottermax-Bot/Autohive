@@ -836,11 +836,6 @@ def mark_contract_paid():
     return redirect(url_for("company_profile", company_name=company_name))
     
 
-@app.route("/log_activity", methods=["POST"])
-def log_activity_alias():
-    return redirect(url_for("log_profile_activity"))
-
-
 @app.route("/log_profile_activity", methods=["POST"])
 def log_profile_activity():
     """
@@ -883,6 +878,7 @@ def log_profile_activity():
     app.logger.info(f"Activity logged: {action} for {company.name} by {employee}")
     flash(f"Activity logged: {action} for {company.name}.", "success")
     return redirect(url_for("company_profile", company_id=company.id))
+
 
 
 

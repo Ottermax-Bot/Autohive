@@ -673,9 +673,11 @@ def process_excel(filepath):
     # Replace NaN with zeros for numeric columns (e.g., "A/R Amt")
     df["A/R Amt"] = df["A/R Amt"].fillna(0.0).astype(float)
 
-    # Dictionary to store contracts from the uploaded file
+    # Dictionary to store processed contracts and companies from the uploaded file
     processed_contracts = {}
+    processed_companies = set()
 
+    # Process each row in the uploaded file
     for _, row in df.iterrows():
         company_name = row["Company Name"]
         if company_name:
@@ -694,6 +696,9 @@ def process_excel(filepath):
                 db.session.add(company)
                 db.session.commit()  # Commit to assign an ID to the new company
 
+            # Add company ID to processed list
+            processed_companies.add(company.id)
+
             # Track contracts for this company
             if company.id not in processed_contracts:
                 processed_contracts[company.id] = set()
@@ -704,6 +709,7 @@ def process_excel(filepath):
                 processed_contracts[company.id].add(contract_number)
                 contract = Contract.query.filter_by(contract_number=contract_number, company_id=company.id).first()
                 if not contract:
+                    # Add a new contract if it doesn't exist
                     contract = Contract(
                         company_id=company.id,
                         contract_number=contract_number,
@@ -713,13 +719,42 @@ def process_excel(filepath):
                     )
                     db.session.add(contract)
                 else:
-                    # Update contract details if it already exists
+                    # Update existing contract details
                     contract.amount_due = row["A/R Amt"]
                     contract.paid = row["Paid"] == "Yes"
                     contract.date_in = datetime.strptime(row["Date In"], "%m/%d/%Y") if row["Date In"] else datetime.now()
 
+    # Now handle missing contracts and companies
+    # Step 1: Mark contracts as paid if they are missing from the uploaded file
+    for company_id, uploaded_contracts in processed_contracts.items():
+        existing_contracts = Contract.query.filter_by(company_id=company_id).all()
+        for contract in existing_contracts:
+            if contract.contract_number not in uploaded_contracts and not contract.paid:
+                contract.paid = True  # Mark as paid
+                log_activity(
+                    employee="System",
+                    action="Marked as Paid",
+                    details=f"Contract {contract.contract_number} automatically marked as paid during upload.",
+                    company_id=company_id
+                )
+
+    # Step 2: Mark all contracts for companies missing from the uploaded file as paid
+    all_company_ids = {company.id for company in Company.query.all()}
+    missing_companies = all_company_ids - processed_companies
+    for company_id in missing_companies:
+        contracts_to_mark_paid = Contract.query.filter_by(company_id=company_id, paid=False).all()
+        for contract in contracts_to_mark_paid:
+            contract.paid = True
+            log_activity(
+                employee="System",
+                action="Marked as Paid",
+                details=f"Contract {contract.contract_number} automatically marked as paid because the company is no longer in the report.",
+                company_id=company_id
+            )
+
     # Commit all changes at once
     db.session.commit()
+
 
 
 

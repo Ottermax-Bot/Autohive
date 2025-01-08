@@ -632,8 +632,12 @@ def process_excel(filepath):
         if column not in df.columns:
             raise ValueError(f"Missing required column: {column}")
 
-    # Fill missing cells with empty strings to avoid issues
-    df.fillna("", inplace=True)
+    # Replace NaN with empty strings for non-numeric columns
+    non_numeric_columns = ["Company Name", "Contract #", "Date In", "Paid"]
+    df[non_numeric_columns] = df[non_numeric_columns].fillna("")
+
+    # Replace NaN with zeros for numeric columns (e.g., "A/R Amt")
+    df["A/R Amt"] = df["A/R Amt"].fillna(0.0).astype(float)
 
     # Dictionary to store contracts from the uploaded file
     processed_contracts = {}
@@ -669,32 +673,20 @@ def process_excel(filepath):
                     contract = Contract(
                         company_id=company.id,
                         contract_number=contract_number,
-                        amount_due=float(row["A/R Amt"]) if row["A/R Amt"] else 0.0,
+                        amount_due=row["A/R Amt"],
                         date_in=datetime.strptime(row["Date In"], "%m/%d/%Y") if row["Date In"] else datetime.now(),
                         paid=row["Paid"] == "Yes"
                     )
                     db.session.add(contract)
                 else:
                     # Update contract details if it already exists
-                    contract.amount_due = float(row["A/R Amt"]) if row["A/R Amt"] else 0.0
+                    contract.amount_due = row["A/R Amt"]
                     contract.paid = row["Paid"] == "Yes"
                     contract.date_in = datetime.strptime(row["Date In"], "%m/%d/%Y") if row["Date In"] else datetime.now()
 
-    # Mark contracts as paid if they are missing from the uploaded file
-    for company_id, uploaded_contracts in processed_contracts.items():
-        existing_contracts = Contract.query.filter_by(company_id=company_id).all()
-        for contract in existing_contracts:
-            if contract.contract_number not in uploaded_contracts and not contract.paid:
-                contract.paid = True  # Mark as paid
-                log_activity(
-                    employee="System",
-                    action="Marked as Paid",
-                    details=f"Contract {contract.contract_number} automatically marked as paid during upload.",
-                    company_id=company_id
-                )
-
     # Commit all changes at once
     db.session.commit()
+
 
 
 @app.route("/log_activity", methods=["POST"])

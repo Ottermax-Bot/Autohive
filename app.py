@@ -800,7 +800,13 @@ def log_activity_route():
 
     # Generate fallback details if none are provided
     if not details:
-        details = f"{action} performed for {company_name}"
+    if action == "Email Sent":
+        details = f"An email was sent to {company_name}."
+    elif action == "Added Note":
+        details = f"A note was added for {company_name}."
+    else:
+        details = f"{action} performed for {company_name}."
+
 
     # Log the activity in the database
     log_activity(employee, action, details, company_id=company_id)

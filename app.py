@@ -798,8 +798,8 @@ def log_activity_route():
     company = Company.query.get(company_id)
     company_name = company.name if company else "Unknown Company"
 
-    # Generate fallback details if none are provided
-    if not details:
+   # Generate fallback details if none are provided
+if not details:
     if action == "Email Sent":
         details = f"An email was sent to {company_name}."
     elif action == "Added Note":

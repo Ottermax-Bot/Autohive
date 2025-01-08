@@ -312,36 +312,44 @@ def all_companies():
     if not is_logged_in():
         return redirect(url_for("login"))
 
-    # Query all companies sorted alphabetically by name
-    companies = Company.query.order_by(Company.name.asc()).all()
+    try:
+        # Fetch all companies sorted alphabetically by name
+        companies = Company.query.order_by(Company.name.asc()).all()
 
-    # Prepare data for the template
-    companies_data = [
-        {
-            "id": company.id,
-            "name": company.name,
-            "contracts_count": len(company.contracts),
-            "outstanding_balance": sum(
-                contract.amount_due for contract in company.contracts if not contract.paid
-            )
-        }
-        for company in companies
-    ]
-
-    # Search/filter functionality
-    query = request.args.get("query", "").lower()
-    if query:
+        # Build data for rendering
         companies_data = [
-            company for company in companies_data
-            if query in company["name"].lower() or query in str(company["outstanding_balance"])
+            {
+                "id": company.id,
+                "name": company.name,
+                "contracts_count": len(company.contracts),
+                "outstanding_balance": sum(
+                    contract.amount_due for contract in company.contracts if not contract.paid
+                )
+            }
+            for company in companies
         ]
 
-    return render_template(
-        "all_companies.html",
-        employee=session["employee"],
-        companies=companies_data,
-        page_title="All Companies"
-    )
+        # Search/filter functionality
+        query = request.args.get("query", "").lower()
+        if query:
+            companies_data = [
+                company for company in companies_data
+                if query in company["name"].lower() or query in str(company["outstanding_balance"])
+            ]
+
+        # Ensure data is passed to the template
+        return render_template(
+            "all_companies.html",
+            employee=session.get("employee", "Unknown Employee"),
+            companies=companies_data,
+            page_title="All Companies"
+        )
+
+    except Exception as e:
+        # Log the error and display a friendly message
+        app.logger.error(f"Error in all_companies route: {e}")
+        flash("An error occurred while fetching company data.", "error")
+        return redirect(url_for("dashboard"))
 
 
 

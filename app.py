@@ -787,7 +787,7 @@ def log_activity_route():
 
     company_id = request.form.get("company_id")
     action = request.form.get("action")
-    details = request.form.get("details", "")  # Optional additional details
+    details = request.form.get("details", "").strip()  # Optional additional details
     employee = session.get("employee", "Unknown Employee")
 
     if not company_id or not action:
@@ -798,21 +798,21 @@ def log_activity_route():
     company = Company.query.get(company_id)
     company_name = company.name if company else "Unknown Company"
 
-   # Generate fallback details if none are provided
-if not details:
-    if action == "Email Sent":
-        details = f"An email was sent to {company_name}."
-    elif action == "Added Note":
-        details = f"A note was added for {company_name}."
-    else:
-        details = f"{action} performed for {company_name}."
-
+    # Generate fallback details if none are provided
+    if not details:
+        if action == "Email Sent":
+            details = f"An email was sent to {company_name}."
+        elif action == "Added Note":
+            details = f"A note was added for {company_name}."
+        else:
+            details = f"{action} performed for {company_name}."
 
     # Log the activity in the database
     log_activity(employee, action, details, company_id=company_id)
 
     flash(f"Activity logged: {action} for company {company_name}.", "success")
     return redirect(url_for("company_profile", company_id=company_id))
+
 
 
 

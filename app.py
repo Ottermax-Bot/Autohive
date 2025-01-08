@@ -804,14 +804,14 @@ def log_activity_route():
     if not details:
         if action == "Email Sent":
             details = f"An email was sent regarding the profile of {company_name}."
-        elif action == "Added Note":
-            details = f"A new note was added to the profile of {company_name}."
         elif action == "Call Made":
-            details = f"A call was made concerning the profile of {company_name}."
+            details = f"A call was made regarding the profile of {company_name}."
         elif action == "Call Received":
             details = f"A call was received regarding the profile of {company_name}."
         elif action == "Marked as Paid":
-            details = f"The profile {company_name} was marked as paid."
+            details = f"The contract for {company_name} was marked as paid."
+        elif action == "Added Note":
+            details = f"A new note was added to the profile of {company_name}."
         else:
             details = f"{action} performed for the profile of {company_name}."
 
@@ -821,6 +821,7 @@ def log_activity_route():
     # Notify the user and redirect to the company profile
     flash(f"Activity logged: {action} for company {company_name}.", "success")
     return redirect(url_for("company_profile", company_id=company_id))
+
 
 
 

@@ -313,40 +313,71 @@ def all_companies():
         return redirect(url_for("login"))
 
     try:
-        # Fetch all companies sorted alphabetically by name
+        app.logger.info("Fetching companies from the database...")
         companies = Company.query.order_by(Company.name.asc()).all()
+        app.logger.info(f"Total companies fetched: {len(companies)}")
 
-        # Build data for rendering
-        companies_data = [
-            {
-                "id": company.id,
-                "name": company.name,
-                "contracts_count": len(company.contracts),
-                "outstanding_balance": sum(
-                    contract.amount_due for contract in company.contracts if not contract.paid
-                )
-            }
-            for company in companies
-        ]
+        # Prepare data for each category
+        uncontacted_unpaid = []
+        contacted_unpaid = []
+        paid_companies = []
 
-        # Search/filter functionality
-        query = request.args.get("query", "").lower()
-        if query:
-            companies_data = [
-                company for company in companies_data
-                if query in company["name"].lower() or query in str(company["outstanding_balance"])
+        for company in companies:
+            unpaid_contracts = [contract for contract in company.contracts if not contract.paid]
+            total_unpaid = sum(contract.amount_due for contract in unpaid_contracts)
+            overdue_contracts = [
+                contract for contract in unpaid_contracts if (datetime.utcnow().date() - contract.date_in).days > 30
             ]
+            last_activity = (
+                db.session.query(ActivityLog.timestamp)
+                .filter_by(company_id=company.id)
+                .order_by(ActivityLog.timestamp.desc())
+                .first()
+            )
+            last_contact_date = last_activity[0].strftime("%Y-%m-%d") if last_activity else "No activity logged"
 
-        # Ensure data is passed to the template
+            # Categorize companies
+            if unpaid_contracts:
+                if last_activity and (datetime.utcnow().date() - datetime.strptime(last_contact_date, "%Y-%m-%d").date()).days <= 7:
+                    contacted_unpaid.append({
+                        "id": company.id,
+                        "name": company.name,
+                        "unpaid_contracts": len(unpaid_contracts),
+                        "total_unpaid": total_unpaid,
+                        "overdue_contracts": len(overdue_contracts),
+                        "last_contact_date": last_contact_date,
+                    })
+                else:
+                    uncontacted_unpaid.append({
+                        "id": company.id,
+                        "name": company.name,
+                        "unpaid_contracts": len(unpaid_contracts),
+                        "total_unpaid": total_unpaid,
+                        "overdue_contracts": len(overdue_contracts),
+                        "last_contact_date": last_contact_date,
+                    })
+            else:
+                paid_companies.append({
+                    "id": company.id,
+                    "name": company.name,
+                    "last_contact_date": last_contact_date,
+                })
+
+        # Log the results
+        app.logger.info(f"Uncontacted unpaid companies: {len(uncontacted_unpaid)}")
+        app.logger.info(f"Contacted unpaid companies: {len(contacted_unpaid)}")
+        app.logger.info(f"Paid companies: {len(paid_companies)}")
+
         return render_template(
             "all_companies.html",
-            employee=session.get("employee", "Unknown Employee"),
-            companies=companies_data,
+            employee=session["employee"],
+            uncontacted_unpaid=uncontacted_unpaid,
+            contacted_unpaid=contacted_unpaid,
+            paid_companies=paid_companies,
             page_title="All Companies"
         )
 
     except Exception as e:
-        # Log the error and display a friendly message
         app.logger.error(f"Error in all_companies route: {e}")
         flash("An error occurred while fetching company data.", "error")
         return redirect(url_for("dashboard"))
@@ -813,6 +844,13 @@ def log_profile_activity():
     flash(f"Activity logged: {action} for {company.name}.", "success")
     return redirect(url_for("company_profile", company_id=company.id))
 
+@app.route("/test-db-connection")
+def test_db_connection():
+    try:
+        companies = Company.query.limit(1).all()
+        return f"Database connection successful. Found {len(companies)} companies.", 200
+    except Exception as e:
+        return f"Database connection failed: {e}", 500
 
 
 

@@ -785,33 +785,43 @@ def log_activity_route():
     if not is_logged_in():
         return redirect(url_for("login"))
 
+    # Extract form data
     company_id = request.form.get("company_id")
     action = request.form.get("action")
     details = request.form.get("details", "").strip()  # Optional additional details
     employee = session.get("employee", "Unknown Employee")
 
+    # Validation for required fields
     if not company_id or not action:
         flash("Invalid activity submission.", "error")
         return redirect(url_for("dashboard"))
 
-    # Fetch the company name for meaningful details
+    # Fetch the company for meaningful details
     company = Company.query.get(company_id)
     company_name = company.name if company else "Unknown Company"
 
     # Generate fallback details if none are provided
     if not details:
         if action == "Email Sent":
-            details = f"An email was sent to {company_name}."
+            details = f"An email was sent regarding the profile of {company_name}."
         elif action == "Added Note":
-            details = f"A note was added for {company_name}."
+            details = f"A new note was added to the profile of {company_name}."
+        elif action == "Call Made":
+            details = f"A call was made concerning the profile of {company_name}."
+        elif action == "Call Received":
+            details = f"A call was received regarding the profile of {company_name}."
+        elif action == "Marked as Paid":
+            details = f"The profile {company_name} was marked as paid."
         else:
-            details = f"{action} performed for {company_name}."
+            details = f"{action} performed for the profile of {company_name}."
 
     # Log the activity in the database
     log_activity(employee, action, details, company_id=company_id)
 
+    # Notify the user and redirect to the company profile
     flash(f"Activity logged: {action} for company {company_name}.", "success")
     return redirect(url_for("company_profile", company_id=company_id))
+
 
 
 

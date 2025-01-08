@@ -354,6 +354,9 @@ def all_companies():
 
 
 
+
+
+
 @app.route("/company_profile/<int:company_id>")
 def company_profile(company_id):
     if not is_logged_in():
